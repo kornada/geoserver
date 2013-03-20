@@ -51,6 +51,7 @@ import org.geoserver.feature.retype.RetypingFeatureSource;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.io.AbstractGridFormat;
+import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.data.DataAccess;
 import org.geotools.data.DataAccessFactory;
 import org.geotools.data.DataAccessFactory.Param;
@@ -1157,6 +1158,20 @@ public class ResourcePool {
     @SuppressWarnings("deprecation")
     public GridCoverageReader getGridCoverageReader( CoverageStoreInfo info, Hints hints ) 
         throws IOException {
+        return getGridCoverageReader(info, (String) null, hints);
+    }
+    
+    /**
+     * Returns a coverage reader, caching the result.
+     *  
+     * @param info The coverage metadata.
+     * @param hints Hints to use when loading the coverage, may be <code>null</code>.
+     * 
+     * @throws IOException Any errors that occur loading the reader.
+     */
+    @SuppressWarnings("deprecation")
+    public GridCoverage2DReader getGridCoverageReader(CoverageStoreInfo info, String coverageName, Hints hints) 
+        throws IOException {
         
         final AbstractGridFormat gridFormat = info.getFormat();
         if(gridFormat == null) {
@@ -1187,39 +1202,44 @@ public class ResourcePool {
             }
         }
         
-        if (reader != null) {
-            return reader;
-        }
-        
-        synchronized ( hints != null ? hintCoverageReaderCache : coverageReaderCache ) {
-            if (key != null) {
-                if (hints != null) {
-                    reader = (GridCoverageReader) hintCoverageReaderCache.get(key);
-                } else {
-                    reader = (GridCoverageReader) coverageReaderCache.get(key);
-                }
-            }
-            if (reader == null) {
-                /////////////////////////////////////////////////////////
-                //
-                // Getting coverage reader using the format and the real path.
-                //
-                // /////////////////////////////////////////////////////////
-                final File obj = GeoserverDataDirectory.findDataFile(info.getURL());
-    
-                reader = gridFormat.getReader(obj,hints);
-                if(key != null) {
-                    if(hints != null) {
-                        hintCoverageReaderCache.put((CoverageHintReaderKey) key, reader);
+        if (reader == null) {
+            synchronized ( hints != null ? hintCoverageReaderCache : coverageReaderCache ) {
+                if (key != null) {
+                    if (hints != null) {
+                        reader = (GridCoverageReader) hintCoverageReaderCache.get(key);
                     } else {
-                        coverageReaderCache.put((String) key, reader);
+                        reader = (GridCoverageReader) coverageReaderCache.get(key);
+                    }
+                }
+                if (reader == null) {
+                    /////////////////////////////////////////////////////////
+                    //
+                    // Getting coverage reader using the format and the real path.
+                    //
+                    // /////////////////////////////////////////////////////////
+                    final File obj = GeoserverDataDirectory.findDataFile(info.getURL());
+        
+                    reader = gridFormat.getReader(obj,hints);
+                    if(key != null) {
+                        if(hints != null) {
+                            hintCoverageReaderCache.put((CoverageHintReaderKey) key, reader);
+                        } else {
+                            coverageReaderCache.put((String) key, reader);
+                        }
                     }
                 }
             }
         }
         
-        return reader;
-            
+        if(coverageName != null) {
+            // force the result to work against a single coverage, so that the OGC service portion of
+            // GeoServer does not need to be updated to the multicoverage stuff
+            // (we might want to introduce a hint later for code that really wants to get the
+            // multi-coverage reader)
+            return new SingleGridCoverage2DReader((GridCoverage2DReader) reader, coverageName);
+        } else {
+            return (GridCoverage2DReader) reader;
+        }
     }
     
     /**
