@@ -89,13 +89,13 @@ public class FeatureSequenceFactory implements SequenceFactory<Feature> {
                 try {
                     // grab the next feature, with a sentinel to tell us whether there was an
                     // exception
-                    featureRetrieved = false;
                     SimpleFeature sf = (SimpleFeature) fi.next();
                     featureRetrieved = true;
                     context.setCurrentFeature(sf);
 
                     List<Symbolizer> symbolizers = getSymbolizers(simplified, sf);
                     if (symbolizers.size() == 0) {
+                        // skip layers that have no active symbolizers
                         continue;
                     }
                     context.setCurrentSymbolizers(symbolizers);
