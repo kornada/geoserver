@@ -673,25 +673,8 @@ public class ResourcePool {
     }
     
     public List<AttributeTypeInfo> loadAttributes(FeatureTypeInfo info) throws IOException {
-        List<AttributeTypeInfo> attributes = new ArrayList();
         FeatureType ft = getFeatureType(info);
-        
-        for (PropertyDescriptor pd : ft.getDescriptors()) {
-            AttributeTypeInfo att = catalog.getFactory().createAttribute();
-            att.setFeatureType(info);
-            att.setName(pd.getName().getLocalPart());
-            att.setMinOccurs(pd.getMinOccurs());
-            att.setMaxOccurs(pd.getMaxOccurs());
-            att.setNillable(pd.isNillable());
-            att.setBinding(pd.getType().getBinding());
-            int length = FeatureTypes.getFieldLength((AttributeDescriptor) pd);
-            if(length > 0) {
-                att.setLength(length);
-            }
-            attributes.add(att);
-        }
-        
-        return attributes;
+        return new CatalogBuilder(catalog).getAttributes(ft, info);
     }
     
     void handleSchemaOverride( List<AttributeTypeInfo> atts, FeatureTypeInfo ft ) throws IOException {
@@ -1236,7 +1219,7 @@ public class ResourcePool {
             // GeoServer does not need to be updated to the multicoverage stuff
             // (we might want to introduce a hint later for code that really wants to get the
             // multi-coverage reader)
-            return new SingleGridCoverage2DReader((GridCoverage2DReader) reader, coverageName);
+            return SingleGridCoverage2DReader.wrap((GridCoverage2DReader) reader, coverageName);
         } else {
             return (GridCoverage2DReader) reader;
         }

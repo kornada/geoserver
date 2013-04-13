@@ -6,7 +6,6 @@ package org.geoserver.catalog.rest;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
@@ -19,10 +18,12 @@ import org.geoserver.catalog.CoverageStoreInfo;
 import org.geoserver.catalog.LayerInfo;
 import org.geoserver.rest.RestletException;
 import org.geoserver.rest.format.DataFormat;
-import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.coverage.grid.io.AbstractGridFormat;
+import org.geotools.coverage.grid.io.GridCoverage2DReader;
+import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
 import org.geotools.data.DataUtilities;
 import org.opengis.coverage.grid.Format;
+import org.opengis.coverage.grid.GridCoverageReader;
 import org.restlet.data.Form;
 import org.restlet.data.Request;
 import org.restlet.data.Response;
@@ -36,6 +37,57 @@ public class CoverageStoreFileResource extends StoreFileResource {
             Format coverageFormat, Catalog catalog) {
         super(request, response, catalog);
         this.coverageFormat = coverageFormat;
+    }
+
+    /**
+     * Post is allowed only if the reader in question is structured and can do harvesting 
+     */
+    @Override
+    public boolean allowPost() {
+        String workspace = getAttribute("workspace");
+        String coveragestore = getAttribute("coveragestore");
+        
+        // check the coverage store exists
+        CoverageStoreInfo info = catalog.getCoverageStoreByName(workspace, coveragestore);
+        if(info == null) {
+            return false;
+        }
+
+        try {
+            GridCoverageReader reader = info.getGridCoverageReader(null, null);
+            if(reader instanceof StructuredGridCoverage2DReader) {
+                StructuredGridCoverage2DReader sr = (StructuredGridCoverage2DReader) reader;
+                return !sr.isReadOnly();
+            } else {
+                return false;
+            }
+        } catch(IOException e) {
+            throw new RestletException("Failed to access the existing reader to " +
+            		"check if it can harvest new files", Status.SERVER_ERROR_INTERNAL);
+        }
+    }
+    
+    @Override
+    public void handlePost() {
+        String workspace = getAttribute("workspace");
+        String coveragestore = getAttribute("coveragestore");
+        String format = getAttribute("format");
+        Request request = getRequest();
+        String method = getUploadMethod(request);
+
+        
+        // theoretically allowPost was just called, so all these should not need a check
+        try {
+            CoverageStoreInfo info = catalog.getCoverageStoreByName(workspace, coveragestore);
+            GridCoverageReader reader = info.getGridCoverageReader(null, null);
+            StructuredGridCoverage2DReader sr = (StructuredGridCoverage2DReader) reader;
+            
+            final File uploadedFile = doFileUpload(method, workspace, coveragestore, format);
+            
+            sr.harvest(uploadedFile);
+        } catch(IOException e) {
+            throw new RestletException("File harvest failed", Status.SERVER_ERROR_INTERNAL, e);
+        }
     }
     
     @Override
