@@ -4,10 +4,14 @@
  */
 package org.geoserver.catalog;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 import org.geotools.coverage.grid.io.GranuleSource;
+import org.geotools.coverage.grid.io.HarvestedFile;
 import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
+import org.geotools.factory.Hints;
 import org.opengis.feature.simple.SimpleFeatureType;
 
 /**
@@ -48,6 +52,12 @@ public class StructuredSingleGridCoverage2DReader extends SingleGridCoverage2DRe
     public boolean removeCoverage(String coverageName) throws IOException,
             UnsupportedOperationException {
         return structuredDelegate.removeCoverage(coverageName);
+    }
+
+    @Override
+    public List<HarvestedFile> harvest(String defaultTargetCoverage, File source, Hints hints)
+            throws IOException, UnsupportedOperationException {
+        return structuredDelegate.harvest(defaultTargetCoverage, source, hints);
     }
 
 }

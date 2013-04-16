@@ -84,7 +84,7 @@ public class CoverageStoreFileResource extends StoreFileResource {
             
             final File uploadedFile = doFileUpload(method, workspace, coveragestore, format);
             
-            sr.harvest(uploadedFile);
+            sr.harvest(null, uploadedFile, null);
         } catch(IOException e) {
             throw new RestletException("File harvest failed", Status.SERVER_ERROR_INTERNAL, e);
         }
