@@ -45,6 +45,15 @@ public class StructuredGridCoverageIndexResource extends CatalogResourceBase {
     protected Object handleObjectGet() throws Exception {
         String nativeCoverageName = coverage.getNativeCoverageName();
         StructuredGridCoverage2DReader reader = (StructuredGridCoverage2DReader) coverage.getGridCoverageReader(null, null);
+        if(nativeCoverageName == null) {
+            if(reader.getGridCoverageNames().length > 1) {
+                throw new IllegalStateException("The grid coverage configuration for " + coverage.getName() 
+                        + " does not specify a native coverage name, yet the reader provides more than one coverage. " +
+                        "Please assign a native coverage name (the GUI does so automatically)");
+            } else {
+                nativeCoverageName = reader.getGridCoverageNames()[0];
+            }
+        }
         
         GranuleSource source = reader.getGranules(nativeCoverageName, true);
         SimpleFeatureType schema = source.getSchema();

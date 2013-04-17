@@ -512,10 +512,6 @@
             <key><value>/workspaces/{workspace}/coveragestores/{coveragestore}/coverages/{coverage}/index/granules/{granule}</value></key>
             <value>structuredCoverageFinder</value>
         </entry>
-        <entry>
-            <key><value>/workspaces/{workspace}/coveragestores/{coveragestore}/coverages/{coverage}/index/granules/{granule}.{format}</value></key>
-            <value>structuredCoverageFinder</value>
-        </entry>
   </map>
 </property>
 </bean>

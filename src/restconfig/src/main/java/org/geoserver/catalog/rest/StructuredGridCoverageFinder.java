@@ -28,7 +28,8 @@ public class StructuredGridCoverageFinder extends AbstractCatalogFinder {
         String ws = getAttribute(request, "workspace");
         String cs = getAttribute(request, "coveragestore");
         String c = getAttribute(request, "coverage");
-        boolean granules = request.getResourceRef().getLastSegment().matches("granules\\..*");
+        String lastSegment = request.getResourceRef().getLastSegment();
+        boolean granules = lastSegment.equals("granules") || lastSegment.matches("granules\\..*");
         String granule = getAttribute(request, "granule");
         
         // ensure referenced resources exist
@@ -64,7 +65,7 @@ public class StructuredGridCoverageFinder extends AbstractCatalogFinder {
                     throw new RestletException( "Invalid path", Status.CLIENT_ERROR_NOT_FOUND);
                 }
             } else {
-                throw new UnsupportedOperationException("not yet");
+                return new GranuleResource(getContext(), request, response, catalog, coverage, granule);
             }
         } catch(IOException e) {
             throw new RestletException( "Failed to load coverage information", Status.SERVER_ERROR_INTERNAL, e);
