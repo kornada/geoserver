@@ -36,7 +36,7 @@ public class SingleGridCoverage2DReader implements GridCoverage2DReader {
         if(delegate instanceof StructuredGridCoverage2DReader) {
             return new StructuredSingleGridCoverage2DReader((StructuredGridCoverage2DReader) delegate, coverageName);
         } else {
-            return new SingleGridCoverage2DReader((StructuredGridCoverage2DReader) delegate, coverageName);
+            return new SingleGridCoverage2DReader((GridCoverage2DReader) delegate, coverageName);
         }
     }
 
