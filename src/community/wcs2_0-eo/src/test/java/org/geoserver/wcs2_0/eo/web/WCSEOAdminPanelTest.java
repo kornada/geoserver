@@ -13,12 +13,12 @@ import org.geoserver.web.GeoServerWicketTestSupport;
 import org.junit.Before;
 import org.junit.Test;
 
-public class TestWCSEOAdminPanel extends GeoServerWicketTestSupport {
+public class WCSEOAdminPanelTest extends GeoServerWicketTestSupport {
 
     private WCSInfo wcs;
 
     @Before
-    public void setupInspireExtensions() {
+    public void setup() {
 
         // prepare read only metadata
         wcs = getGeoServer().getService(WCSInfo.class);

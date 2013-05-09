@@ -11,7 +11,7 @@ package org.geoserver.wcs2_0.eo;
  *
  */
 public enum WCSEOMetadata {
-    ENABLED("wcseo.enabled");
+    ENABLED("wcseo.enabled"), DATASET("wcseo.dataset");
 
     public String key;
 
