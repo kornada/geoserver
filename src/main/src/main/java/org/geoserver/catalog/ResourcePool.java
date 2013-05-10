@@ -1161,7 +1161,7 @@ public class ResourcePool {
             throw new IOException("Could not find the raster plugin for format " + info.getType());
         }
         
-        GridCoverageReader reader = null;
+        GridCoverage2DReader reader = null;
         Object key;
         if ( hints != null && info.getId() != null) {
             // expand the hints if necessary
@@ -1179,11 +1179,11 @@ public class ResourcePool {
             }
             
             key = new CoverageHintReaderKey(info.getId(), hints);
-            reader = (GridCoverageReader) hintCoverageReaderCache.get( key );
+            reader = (GridCoverage2DReader) hintCoverageReaderCache.get( key );
         } else {
             key = info.getId();
             if(key != null) {
-                reader = (GridCoverageReader) coverageReaderCache.get( key );
+                reader = (GridCoverage2DReader) coverageReaderCache.get( key );
             }
         }
         
@@ -1194,9 +1194,9 @@ public class ResourcePool {
         synchronized ( hints != null ? hintCoverageReaderCache : coverageReaderCache ) {
             if (key != null) {
                 if (hints != null) {
-                    reader = (GridCoverageReader) hintCoverageReaderCache.get(key);
+                    reader = (GridCoverage2DReader) hintCoverageReaderCache.get(key);
                 } else {
-                    reader = (GridCoverageReader) coverageReaderCache.get(key);
+                    reader = (GridCoverage2DReader) coverageReaderCache.get(key);
                 }
             }
             if (reader == null) {
@@ -1213,39 +1213,13 @@ public class ResourcePool {
                     if(hints != null) {
                         hintCoverageReaderCache.put((CoverageHintReaderKey) key, reader);
                     } else {
-                        reader = (GridCoverageReader) coverageReaderCache.get(key);
-                    }
-                }
-                if (reader == null) {
-                    /////////////////////////////////////////////////////////
-                    //
-                    // Getting coverage reader using the format and the real path.
-                    //
-                    // /////////////////////////////////////////////////////////
-                    final File obj = GeoserverDataDirectory.findDataFile(info.getURL());
-        
-                    // readers might change the provided hints, pass down a defensive copy
-                    reader = gridFormat.getReader(obj, new Hints(hints));
-                    if(key != null) {
-                        if(hints != null) {
-                            hintCoverageReaderCache.put((CoverageHintReaderKey) key, reader);
-                        } else {
-                            coverageReaderCache.put((String) key, reader);
-                        }
+                        coverageReaderCache.put((String) key, reader);
                     }
                 }
             }
         }
         
-        if(coverageName != null) {
-            // force the result to work against a single coverage, so that the OGC service portion of
-            // GeoServer does not need to be updated to the multicoverage stuff
-            // (we might want to introduce a hint later for code that really wants to get the
-            // multi-coverage reader)
-            return SingleGridCoverage2DReader.wrap((GridCoverage2DReader) reader, coverageName);
-        } else {
-            return (GridCoverage2DReader) reader;
-        }
+        return reader;
     }
     
     /**
