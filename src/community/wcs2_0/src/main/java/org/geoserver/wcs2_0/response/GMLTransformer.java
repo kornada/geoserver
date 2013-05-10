@@ -216,7 +216,7 @@ class GMLTransformer extends TransformerBase {
          * @param gc2d
          * @throws IOException 
          */
-        public void handleMetadata(GridCoverage2D gc2d, TimeDimensionHelper timeHelper) throws IOException {
+        public void handleMetadata(GridCoverage2D gc2d, WCSTimeDimensionHelper timeHelper) throws IOException {
             start("gmlcov:metadata");
             start("gmlcov:Extension");
          
@@ -291,7 +291,7 @@ class GMLTransformer extends TransformerBase {
          * @param axisLabels
          * @throws IOException 
          */
-        public void handleBoundedBy(GridCoverage2D gc2d, boolean axisSwap, String srsName, String axisLabels, TimeDimensionHelper timeHelper) throws IOException {
+        public void handleBoundedBy(GridCoverage2D gc2d, boolean axisSwap, String srsName, String axisLabels, WCSTimeDimensionHelper timeHelper) throws IOException {
             final GeneralEnvelope envelope = new GeneralEnvelope(gc2d.getEnvelope());
             final CoordinateReferenceSystem crs = gc2d.getCoordinateReferenceSystem2D();
             final CoordinateSystem cs = crs.getCoordinateSystem();

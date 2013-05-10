@@ -32,7 +32,7 @@ public class WCSEOLayerConfig extends LayerConfigurationPanel {
 
         // add the checkbox to enable exposing a layer as a dataset
         MapModel datasetModel = new MapModel(new PropertyModel<MetadataMap>(model,
-                "metadata"), WCSEOMetadata.DATASET.key);
+                "resource.metadata"), WCSEOMetadata.DATASET.key);
         CheckBox dataset = new CheckBox("dataset", datasetModel);
         add(dataset);
     }

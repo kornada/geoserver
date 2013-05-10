@@ -6,9 +6,7 @@ package org.geoserver.wcs2_0.response;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 import java.util.TreeSet;
 import java.util.logging.Logger;
 
@@ -25,9 +23,9 @@ import org.vfny.geoserver.wcs.WcsException;
  * 
  * @author Andrea Aime - GeoSolutions
  */
-class TimeDimensionHelper {
+public class WCSTimeDimensionHelper {
 
-    static final Logger LOGGER = Logging.getLogger(TimeDimensionHelper.class);
+    static final Logger LOGGER = Logging.getLogger(WCSTimeDimensionHelper.class);
 
     /**
      * Duration in ms of well know time periods
@@ -54,7 +52,7 @@ class TimeDimensionHelper {
 
     String coverageId;
 
-    public TimeDimensionHelper(DimensionInfo timeDimension, GridCoverage2DReader reader, String coverageId) throws IOException {
+    public WCSTimeDimensionHelper(DimensionInfo timeDimension, GridCoverage2DReader reader, String coverageId) throws IOException {
         this.timeDimension = timeDimension;
         this.accessor = new ReaderDimensionsAccessor(reader);
         this.coverageId = coverageId;

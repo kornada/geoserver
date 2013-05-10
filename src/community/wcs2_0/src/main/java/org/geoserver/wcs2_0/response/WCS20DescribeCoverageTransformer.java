@@ -146,10 +146,10 @@ public class WCS20DescribeCoverageTransformer extends GMLTransformer {
                 String encodedId = NCNameResourceCodec.encode(ci);
                 
                 // see if we have to handle time
-                TimeDimensionHelper timeHelper = null;
+                WCSTimeDimensionHelper timeHelper = null;
                 DimensionInfo time = ci.getMetadata().get(ResourceInfo.TIME, DimensionInfo.class);
                 if(time != null && time.isEnabled()) {
-                    timeHelper = new TimeDimensionHelper(time, RequestUtils.getCoverageReader(ci), encodedId);
+                    timeHelper = new WCSTimeDimensionHelper(time, RequestUtils.getCoverageReader(ci), encodedId);
                 }
                 
                 gc2d = RequestUtils.readSampleGridCoverage(ci);

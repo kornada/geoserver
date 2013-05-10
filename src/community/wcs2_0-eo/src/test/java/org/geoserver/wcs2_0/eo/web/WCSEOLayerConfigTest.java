@@ -1,6 +1,7 @@
 package org.geoserver.wcs2_0.eo.web;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import javax.xml.namespace.QName;
 
@@ -15,7 +16,6 @@ import org.geoserver.wcs2_0.eo.WCSEOMetadata;
 import org.geoserver.web.ComponentBuilder;
 import org.geoserver.web.FormTestPage;
 import org.geoserver.web.GeoServerWicketTestSupport;
-import org.junit.Before;
 import org.junit.Test;
 
 public class WCSEOLayerConfigTest extends GeoServerWicketTestSupport {
@@ -73,7 +73,7 @@ public class WCSEOLayerConfigTest extends GeoServerWicketTestSupport {
         // print(tester.getLastRenderedPage(), true, true);
 
         tester.assertModelValue("form:panel:dataset", true);
-        assertTrue((boolean) layer.getMetadata().get(WCSEOMetadata.DATASET.key, Boolean.class));
+        assertTrue((boolean) layer.getResource().getMetadata().get(WCSEOMetadata.DATASET.key, Boolean.class));
     }
 
 

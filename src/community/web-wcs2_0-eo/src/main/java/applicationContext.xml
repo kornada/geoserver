@@ -6,5 +6,7 @@
 
 <beans>
 
+  <bean id="wcsEoExtendedCapsProvider"
+    class="org.geoserver.wcs2_0.eo.WCSEOExtendedCapabilitiesProvider" />
 
 </beans>
