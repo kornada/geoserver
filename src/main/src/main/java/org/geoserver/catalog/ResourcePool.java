@@ -1187,11 +1187,31 @@ public class ResourcePool {
             }
         }
         
-        if (reader == null) {
-            synchronized ( hints != null ? hintCoverageReaderCache : coverageReaderCache ) {
-                if (key != null) {
-                    if (hints != null) {
-                        reader = (GridCoverageReader) hintCoverageReaderCache.get(key);
+        if (reader != null) {
+            return reader;
+        }
+        
+        synchronized ( hints != null ? hintCoverageReaderCache : coverageReaderCache ) {
+            if (key != null) {
+                if (hints != null) {
+                    reader = (GridCoverageReader) hintCoverageReaderCache.get(key);
+                } else {
+                    reader = (GridCoverageReader) coverageReaderCache.get(key);
+                }
+            }
+            if (reader == null) {
+                /////////////////////////////////////////////////////////
+                //
+                // Getting coverage reader using the format and the real path.
+                //
+                // /////////////////////////////////////////////////////////
+                final File obj = GeoserverDataDirectory.findDataFile(info.getURL());
+    
+                // readers might change the provided hints, pass down a defensive copy
+                reader = gridFormat.getReader(obj, new Hints(hints));
+                if(key != null) {
+                    if(hints != null) {
+                        hintCoverageReaderCache.put((CoverageHintReaderKey) key, reader);
                     } else {
                         reader = (GridCoverageReader) coverageReaderCache.get(key);
                     }

@@ -41,11 +41,9 @@
           <descriptor>release/ext-javascript.xml</descriptor>
           <descriptor>release/ext-spatialite.xml</descriptor>
           <descriptor>release/ext-jdbcconfig.xml</descriptor>
-          <descriptor>release/ext-inspire.xml</descriptor>
           <descriptor>release/ext-sfs.xml</descriptor>
        	  <descriptor>release/ext-dds.xml</descriptor>
           <descriptor>release/ext-aggregate.xml</descriptor>
-          <descriptor>release/ext-xslt.xml</descriptor>
           <descriptor>release/ext-wcs2_0.xml</descriptor>
           <descriptor>release/ext-wms-eo.xml</descriptor>
           <descriptor>release/ext-libjpeg-turbo.xml</descriptor>
@@ -155,11 +153,9 @@
         <module>ftp</module>
         <module>spatialite</module>
         <module>jdbcconfig</module>
-        <module>inspire</module>
         <module>sfs</module>
         <module>feature-aggregate</module>
         <module>script</module>
-        <module>xslt</module>
         <module>wcs2_0</module>
         <module>wcs2_0-eo</module>
         <module>web-wcs2_0-eo</module>
@@ -195,12 +191,6 @@
       <id>sextante</id>
       <modules>
         <module>wps-sextante</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>inspire</id>
-      <modules>
-        <module>inspire</module>
       </modules>
     </profile>
     <profile>      
@@ -240,15 +230,6 @@
       </activation> 
       <modules>
         <module>script</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>xslt</id>
-      <activation>
-        <property><name>xslt</name></property>
-      </activation> 
-      <modules>
-        <module>xslt</module>
       </modules>
     </profile>
     <profile>
