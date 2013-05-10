@@ -1187,39 +1187,45 @@ public class ResourcePool {
             }
         }
         
-        if (reader != null) {
-            return reader;
-        }
-        
-        synchronized ( hints != null ? hintCoverageReaderCache : coverageReaderCache ) {
-            if (key != null) {
-                if (hints != null) {
-                    reader = (GridCoverage2DReader) hintCoverageReaderCache.get(key);
-                } else {
-                    reader = (GridCoverage2DReader) coverageReaderCache.get(key);
-                }
-            }
-            if (reader == null) {
-                /////////////////////////////////////////////////////////
-                //
-                // Getting coverage reader using the format and the real path.
-                //
-                // /////////////////////////////////////////////////////////
-                final File obj = GeoserverDataDirectory.findDataFile(info.getURL());
-    
-                // readers might change the provided hints, pass down a defensive copy
-                reader = gridFormat.getReader(obj, new Hints(hints));
-                if(key != null) {
-                    if(hints != null) {
-                        hintCoverageReaderCache.put((CoverageHintReaderKey) key, reader);
+        if (reader == null) {
+            synchronized ( hints != null ? hintCoverageReaderCache : coverageReaderCache ) {
+                if (key != null) {
+                    if (hints != null) {
+                        reader = (GridCoverage2DReader) hintCoverageReaderCache.get(key);
                     } else {
-                        coverageReaderCache.put((String) key, reader);
+                        reader = (GridCoverage2DReader) coverageReaderCache.get(key);
+                    }
+                }
+                if (reader == null) {
+                    /////////////////////////////////////////////////////////
+                    //
+                    // Getting coverage reader using the format and the real path.
+                    //
+                    // /////////////////////////////////////////////////////////
+                    final File obj = GeoserverDataDirectory.findDataFile(info.getURL());
+        
+                    // readers might change the provided hints, pass down a defensive copy
+                    reader = gridFormat.getReader(obj, new Hints(hints));
+                    if(key != null) {
+                        if(hints != null) {
+                            hintCoverageReaderCache.put((CoverageHintReaderKey) key, reader);
+                        } else {
+                            coverageReaderCache.put((String) key, reader);
+                        }
                     }
                 }
             }
         }
         
-        return reader;
+        if(coverageName != null) {
+            // force the result to work against a single coverage, so that the OGC service portion of
+            // GeoServer does not need to be updated to the multicoverage stuff
+            // (we might want to introduce a hint later for code that really wants to get the
+            // multi-coverage reader)
+            return SingleGridCoverage2DReader.wrap((GridCoverage2DReader) reader, coverageName);
+        } else {
+            return (GridCoverage2DReader) reader;
+        }
     }
     
     /**
