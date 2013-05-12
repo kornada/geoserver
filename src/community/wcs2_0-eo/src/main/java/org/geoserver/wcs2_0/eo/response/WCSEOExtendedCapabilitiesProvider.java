@@ -2,7 +2,7 @@
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
-package org.geoserver.wcs2_0.eo;
+package org.geoserver.wcs2_0.eo.response;
 
 import static org.geoserver.ows.util.ResponseUtils.appendQueryString;
 import static org.geoserver.ows.util.ResponseUtils.buildURL;
@@ -19,9 +19,10 @@ import org.geoserver.ows.URLMangler;
 import org.geoserver.ows.URLMangler.URLType;
 import org.geoserver.ows.util.ResponseUtils;
 import org.geoserver.wcs.WCSInfo;
+import org.geoserver.wcs2_0.eo.EOCoverageResourceCodec;
+import org.geoserver.wcs2_0.eo.WCSEOMetadata;
 import org.geoserver.wcs2_0.response.WCSExtendedCapabilitiesProvider;
 import org.geoserver.wcs2_0.response.WCSTimeDimensionHelper;
-import org.geoserver.wcs2_0.util.NCNameResourceCodec;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.xml.sax.Attributes;
@@ -34,8 +35,11 @@ import org.xml.sax.helpers.NamespaceSupport;
  * @author Andrea Aime - GeoSolutions
  */
 public class WCSEOExtendedCapabilitiesProvider extends WCSExtendedCapabilitiesProvider {
+    EOCoverageResourceCodec codec;
     
-    public static final String NAMESPACE = "http://www.opengis.net/wcseo/1.0";
+    public WCSEOExtendedCapabilitiesProvider(EOCoverageResourceCodec codec) {
+        this.codec = codec;
+    }
 
     /**
      * IGN : Do we still need to host this xsd ?
@@ -43,12 +47,12 @@ public class WCSEOExtendedCapabilitiesProvider extends WCSExtendedCapabilitiesPr
     public String[] getSchemaLocations(String schemaBaseURL) {
         String schemaLocation = ResponseUtils.buildURL(schemaBaseURL, "schemas/wcseo/1.0/wcsEOGetCapabilites.xsd",
                 null, URLType.RESOURCE);
-        return new String[] { NAMESPACE, schemaLocation };
+        return new String[] { WCSEOMetadata.NAMESPACE, schemaLocation };
     }
 
     @Override
     public void registerNamespaces(NamespaceSupport namespaces) {
-        namespaces.declarePrefix("wcseo", NAMESPACE);
+        namespaces.declarePrefix("wcseo", WCSEOMetadata.NAMESPACE);
     }
 
     @Override
@@ -92,7 +96,7 @@ public class WCSEOExtendedCapabilitiesProvider extends WCSExtendedCapabilitiesPr
                 element(tx, "ows:LowerCorner", bbox.getMinX() + " " + bbox.getMinY(), null);
                 element(tx, "ows:UpperCorner", bbox.getMaxX() + " " + bbox.getMaxY(), null);
                 tx.end("ows:WGS84BoundingBox");
-                String datasetId = NCNameResourceCodec.encode(ci) + "__dss";
+                String datasetId = codec.getDatasetName(ci);
                 element(tx, "wcseo:DatasetSeriesId", datasetId, null);
                 
                 GridCoverage2DReader reader = (GridCoverage2DReader) ci.getGridCoverageReader(null, null);

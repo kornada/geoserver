@@ -6,8 +6,8 @@ package org.geoserver.wcs2_0.response;
 
 import java.awt.image.DataBuffer;
 import java.awt.image.RenderedImage;
-import java.util.Date;
 import java.io.IOException;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.TreeSet;
@@ -19,6 +19,7 @@ import javax.media.jai.iterator.RectIter;
 import javax.media.jai.iterator.RectIterFactory;
 
 import org.geoserver.catalog.DimensionPresentation;
+import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.wcs2_0.GetCoverage;
 import org.geoserver.wcs2_0.exception.WCS20Exception;
 import org.geoserver.wcs2_0.util.EnvelopeAxesLabelsMapper;
@@ -27,6 +28,7 @@ import org.geotools.coverage.TypeMap;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.GridEnvelope2D;
 import org.geotools.coverage.grid.GridGeometry2D;
+import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.geometry.GeneralEnvelope;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.CRS.AxisOrder;
@@ -45,8 +47,10 @@ import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.crs.GeographicCRS;
 import org.opengis.referencing.cs.CoordinateSystem;
 import org.opengis.referencing.operation.MathTransform2D;
+import org.xml.sax.Attributes;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.helpers.AttributesImpl;
+import org.xml.sax.helpers.NamespaceSupport;
 
 /**
  * Internal Base {@link GMLTransformer} for DescribeCoverage and GMLCoverageEncoding
@@ -72,13 +76,53 @@ class GMLTransformer extends TransformerBase {
 
     class GMLTranslator extends TranslatorSupport {
 
+        protected List<WCS20CoverageMetadataProvider> extensions;
+        private WCS20CoverageMetadataProvider.Translator translator = new WCS20CoverageMetadataProvider.Translator() {
+            
+            @Override
+            public void start(String element, Attributes attributes) {
+                GMLTranslator.this.start(element, attributes);
+            }
+            
+            @Override
+            public void start(String element) {
+                GMLTranslator.this.start(element);
+                
+            }
+            
+            @Override
+            public void end(String element) {
+                GMLTranslator.this.end(element);
+                
+            }
+            
+            @Override
+            public void chars(String text) {
+                GMLTranslator.this.chars(text);
+            }
+        };
+        protected TranslatorHelper helper = new TranslatorHelper();
+
         public GMLTranslator(ContentHandler contentHandler) {
             super(contentHandler, null, null);
+            this.extensions = GeoServerExtensions.extensions(WCS20CoverageMetadataProvider.class);
         }
 
         @Override
         public void encode(Object o) throws IllegalArgumentException {
-            // TODO does the real encoding
+            // register namespaces provided by extended capabilities
+            NamespaceSupport namespaces = getNamespaceSupport();
+            namespaces.declarePrefix("wcscrs", "http://www.opengis.net/wcs/service-extension/crs/1.0");
+            namespaces.declarePrefix("int", "http://www.opengis.net/WCS_service-extension_interpolation/1.0");
+            namespaces.declarePrefix("gml", "http://www.opengis.net/gml/3.2");
+            namespaces.declarePrefix("gmlcov", "http://www.opengis.net/gmlcov/1.0");
+            namespaces.declarePrefix("swe", "http://www.opengis.net/swe/2.0");
+            namespaces.declarePrefix("xlink", "http://www.w3.org/1999/xlink");
+            namespaces.declarePrefix("xsi", "http://www.w3.org/2001/XMLSchema-instance");
+
+            for (WCS20CoverageMetadataProvider cp : extensions) {
+                cp.registerNamespaces(namespaces);
+            }
 
             // is this a GridCoverage?
             if (!(o instanceof GridCoverage2D)) {
@@ -88,8 +132,6 @@ class GMLTransformer extends TransformerBase {
             final GridCoverage2D gc2d = (GridCoverage2D) o;
             // we are going to use this name as an ID
             final String gcName = gc2d.getName().toString(Locale.getDefault());
-            
-
 
             // get the crs and look for an EPSG code
             final CoordinateReferenceSystem crs = gc2d.getCoordinateReferenceSystem2D();
@@ -110,18 +152,8 @@ class GMLTransformer extends TransformerBase {
             // handle axes swap for geographic crs
             final boolean axisSwap = CRS.getAxisOrder(crs).equals(AxisOrder.EAST_NORTH);
 
-            // TODO do we miss any of them?
             final AttributesImpl attributes = new AttributesImpl();
-            attributes.addAttribute("", "xmlns:gml", "xmlns:gml", "",
-                    "http://www.opengis.net/gml/3.2");
-            attributes.addAttribute("", "xmlns:gmlcov", "xmlns:gmlcov", "",
-                    "http://www.opengis.net/gmlcov/1.0");
-            attributes.addAttribute("", "xmlns:swe", "xmlns:swe", "",
-                    "http://www.opengis.net/swe/2.0");
-            attributes.addAttribute("", "xmlns:xlink", "xmlns:xlink", "",
-                    "http://www.w3.org/1999/xlink");
-            attributes.addAttribute("", "xmlns:xsi", "xmlns:xsi", "",
-                    "http://www.w3.org/2001/XMLSchema-instance");
+            helper.registerNamespaces(getNamespaceSupport(), attributes);
 
             // using Name as the ID
             attributes.addAttribute("", "gml:id", "gml:id", "",
@@ -135,7 +167,8 @@ class GMLTransformer extends TransformerBase {
             }
             String axesLabel = builder.substring(0, builder.length() - 1);
             try {
-                handleBoundedBy(gc2d, axisSwap, srsName, axesLabel, null);
+                GeneralEnvelope envelope = new GeneralEnvelope(gc2d.getEnvelope());
+                handleBoundedBy(envelope, axisSwap, srsName, axesLabel, null);
             } catch (IOException ex) {
                 throw new WCS20Exception(ex);
             }
@@ -148,20 +181,21 @@ class GMLTransformer extends TransformerBase {
                 builder.append(axisName).append(" ");
             }
             axesLabel = builder.substring(0, builder.length() - 1);
-            handleDomainSet(gc2d, gcName, srsName, axisSwap);
+            handleDomainSet(gc2d.getGridGeometry(), gc2d.getDimension(), gcName, srsName, axisSwap);
 
             // handle rangetype
             handleRangeType(gc2d);
 
             // handle coverage function
-            handleCoverageFunction(gc2d, axisSwap);
+            final GridEnvelope2D ge2D = gc2d.getGridGeometry().getGridRange2D();
+            handleCoverageFunction(ge2D, axisSwap);
 
             // handle range
             handleRange(gc2d);
 
             // handle metadata OPTIONAL
             try {
-                handleMetadata(gc2d, null);
+                handleMetadata(null, null);
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -185,7 +219,7 @@ class GMLTransformer extends TransformerBase {
          * @param gc2d
          * @param axisSwap
          */
-        public void handleCoverageFunction(GridCoverage2D gc2d, boolean axisSwap) {
+        public void handleCoverageFunction(GridEnvelope2D gridRange, boolean axisSwap) {
             start("gml:coverageFunction");
             start("gml:GridFunction");
 
@@ -193,8 +227,7 @@ class GMLTransformer extends TransformerBase {
             final AttributesImpl gridAttrs = new AttributesImpl();
             gridAttrs.addAttribute("", "axisOrder", "axisOrder", "", axisSwap ? "+2 +1" : "+1 +2");
             element("gml:sequenceRule", "Linear", gridAttrs); // minOccurs 0, default Linear
-            final GridEnvelope2D ge2D = gc2d.getGridGeometry().getGridRange2D();
-            element("gml:startPoint", ge2D.x + " " + ge2D.y); // we start at minx, miny (this is optional though)
+            element("gml:startPoint", gridRange.x + " " + gridRange.y); // we start at minx, miny (this is optional though)
 
             end("gml:GridFunction");
             end("gml:coverageFunction");
@@ -213,10 +246,11 @@ class GMLTransformer extends TransformerBase {
          * }
          * </pre>
          * 
-         * @param gc2d
+         * @param context Can be either a {@link GridCoverage2DReader} or a {@link GridCoverage2D}, depending
+         *                on how the method is invoked
          * @throws IOException 
          */
-        public void handleMetadata(GridCoverage2D gc2d, WCSTimeDimensionHelper timeHelper) throws IOException {
+        public void handleMetadata(Object context, WCSTimeDimensionHelper timeHelper) throws IOException {
             start("gmlcov:metadata");
             start("gmlcov:Extension");
          
@@ -262,6 +296,11 @@ class GMLTransformer extends TransformerBase {
                 }
                 end("wcsgs:TimeDomain");
             }
+            
+            for (WCS20CoverageMetadataProvider extension : extensions) {
+                extension.encode(translator, context);
+            }
+            
 
             end("gmlcov:Extension");
             end("gmlcov:metadata");
@@ -291,9 +330,8 @@ class GMLTransformer extends TransformerBase {
          * @param axisLabels
          * @throws IOException 
          */
-        public void handleBoundedBy(GridCoverage2D gc2d, boolean axisSwap, String srsName, String axisLabels, WCSTimeDimensionHelper timeHelper) throws IOException {
-            final GeneralEnvelope envelope = new GeneralEnvelope(gc2d.getEnvelope());
-            final CoordinateReferenceSystem crs = gc2d.getCoordinateReferenceSystem2D();
+        public void handleBoundedBy(final GeneralEnvelope envelope, boolean axisSwap, String srsName, String axisLabels, WCSTimeDimensionHelper timeHelper) throws IOException {
+            final CoordinateReferenceSystem crs = envelope.getCoordinateReferenceSystem();
             final CoordinateSystem cs = crs.getCoordinateSystem();
 
             // TODO time
@@ -614,18 +652,13 @@ class GMLTransformer extends TransformerBase {
          * @param srsName
          * @param axesSwap
          */
-        public void handleDomainSet(GridCoverage2D gc2d, String gcName, String srsName,
+        public void handleDomainSet(GridGeometry2D gg2D, int gridDimension, String gcName, String srsName,
                 boolean axesSwap) {
-            // retrieve info
-
-            final GridGeometry2D gg2D = gc2d.getGridGeometry();
-
             // setup vars
             final String gridId = "grid00__" + gcName;
 
             // Grid Envelope
             final GridEnvelope gridEnvelope = gg2D.getGridRange();
-            final int gridDimension = gc2d.getDimension();
 
             final StringBuilder lowSb = new StringBuilder();
             for (int i : gridEnvelope.getLow().getCoordinateValues()) {
@@ -695,7 +728,7 @@ class GMLTransformer extends TransformerBase {
 
         }
 
-        private void encodeTimePeriod(String beginPosition, String endPosition, String timePeriodId, String intervalUnit, Long intervalValue) {
+        public void encodeTimePeriod(String beginPosition, String endPosition, String timePeriodId, String intervalUnit, Long intervalValue) {
             AttributesImpl atts = new AttributesImpl();
             atts.addAttribute("", "gml:id", "gml:id", "", timePeriodId);
             start("gml:TimePeriod", atts);

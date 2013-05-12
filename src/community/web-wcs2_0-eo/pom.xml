@@ -16,21 +16,28 @@ application directory.
     </parent>
 
     <groupId>org.geoserver.community</groupId>
-    <artifactId>wcs2_0-eo</artifactId>
+    <artifactId>web-wcs2_0-eo</artifactId>
     <packaging>jar</packaging>
-    <name>Web Coverage Service 2.0 Earth Observation extensions</name>
+    <name>Web Coverage Service 2.0 Earth Observation GUI extension</name>
 
     <dependencies>
 
         <dependency>
+            <groupId>org.geoserver.web</groupId>
+            <artifactId>web-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.geoserver.community</groupId>
-            <artifactId>wcs2_0</artifactId>
+            <artifactId>wcs2_0-eo</artifactId>
             <version>${project.version}</version>
             <type>jar</type>
         </dependency>
+
         <dependency>
-            <groupId>org.geoserver.community</groupId>
-            <artifactId>wcs2_0</artifactId>
+            <groupId>org.geoserver.web</groupId>
+            <artifactId>web-core</artifactId>
             <version>${project.version}</version>
             <classifier>tests</classifier>
             <scope>test</scope>

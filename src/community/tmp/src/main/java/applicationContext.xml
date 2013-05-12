@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights 
+  reserved. This code is licensed under the GPL 2.0 license, available at the 
+  root application directory. -->
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+
+<beans>
+
+  <bean id="wcsEoCoverageResourceCodec" class="org.geoserver.wcs2_0.eo.EOCoverageResourceCodec">
+    <constructor-arg index="0" ref="catalog" />
+  </bean>
+
+  <bean id="wcsEoExtendedCapsProvider"
+    class="org.geoserver.wcs2_0.eo.WCSEOExtendedCapabilitiesProvider">
+    <constructor-arg index="0" ref="wcsEoCoverageResourceCodec" />
+  </bean>
+
+  <bean id="wcs20ServiceInterceptor-describeEOCoverageSet"
+    class="org.geoserver.wcs2_0.eo.DescribeEOCoverageSetInterceptor">
+    <constructor-arg ref="geoServer" />
+    <constructor-arg ref="coverageResponseDelegateFactory" />
+    <constructor-arg ref="envelopeDimensionsMapper" />
+    <constructor-arg ref="MIMETYPEMapper" />
+    <constructor-arg ref="wcsEoCoverageResourceCodec" />
+  </bean>
+
+  <!-- DescribeEOCoverageSet -->
+  <bean id="wcs20describeEOCoverageSetIdKvpParser" class="org.geoserver.ows.FlatKvpParser">
+    <constructor-arg index="0" value="eoId" />
+    <constructor-arg index="1" value="java.lang.String" />
+    <property name="service" value="WCS" />
+    <property name="request" value="DescribeEOCoverageSet" />
+  </bean>
+  <bean id="wcs20DescribeEOCoverageSetKvpReader"
+    class="org.geoserver.wcs2_0.eo.kvp.WCS20DescribeEOCoverageSetRequestReader" />
+
+<!-- 
+  <bean id="wcs201DescribeCoverageRequestReader" class="org.geoserver.wcs2_0.xml.WcsXmlReader">
+    <constructor-arg value="DescribeCoverage" />
+    <constructor-arg value="2.0.1" />
+    <constructor-arg ref="wcs-2.0.1-configuration" />
+  </bean>
+   -->
+
+  <bean id="wcs20DescribeEOCoverageSetResponse"
+    class="org.geoserver.wcs2_0.eo.response.WCS20DescribeEOCoverageSetResponse"/>
+
+
+</beans>

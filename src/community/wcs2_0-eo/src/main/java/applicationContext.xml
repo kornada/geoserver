@@ -6,22 +6,52 @@
 
 <beans>
 
-  <bean id="wcseoAdminPanel" class="org.geoserver.web.services.AdminPagePanelInfo">
-    <property name="id" value="wcseoAdminPanel"/>
-    <property name="titleKey" value="wcseo"/>
-    <property name="componentClass" value="org.geoserver.wcs2_0.eo.web.WCSEOAdminPanel"/>
-    <property name="serviceClass" value="org.geoserver.wcs.WCSInfo"/>
+  <bean id="wcsEoCoverageResourceCodec" class="org.geoserver.wcs2_0.eo.EOCoverageResourceCodec">
+    <constructor-arg index="0" ref="catalog" />
   </bean>
-  
-    <bean id="wcsEoLayerConfig" class="org.geoserver.web.publish.LayerConfigurationPanelInfo">
-    <property name="id" value="wcsEoResourceConfig"/>
-    <property name="titleKey" value="data.resource.config.wcs"/>
-    <property name="componentClass" value="org.geoserver.wcs2_0.eo.web.WCSEOLayerConfig"/>
-    <property name="supportedTypes">
-      <list>  
-        <value>org.geoserver.catalog.CoverageInfo</value>
-      </list>
-    </property>
+
+  <bean id="wcsEoExtendedCapsProvider"
+    class="org.geoserver.wcs2_0.eo.response.WCSEOExtendedCapabilitiesProvider">
+    <constructor-arg index="0" ref="wcsEoCoverageResourceCodec" />
   </bean>
+
+  <bean id="wcsEoCoverageMetadataProvider"
+    class="org.geoserver.wcs2_0.eo.response.WCSEOCoverageMetadataProvider">
+    <!-- 
+    <constructor-arg index="0" ref="wcsEoCoverageResourceCodec" />
+     -->
+  </bean>
+
+
+  <bean id="wcs20ServiceInterceptor-describeEOCoverageSet"
+    class="org.geoserver.wcs2_0.eo.DescribeEOCoverageSetInterceptor">
+    <constructor-arg ref="geoServer" />
+    <constructor-arg ref="coverageResponseDelegateFactory" />
+    <constructor-arg ref="envelopeDimensionsMapper" />
+    <constructor-arg ref="MIMETYPEMapper" />
+    <constructor-arg ref="wcsEoCoverageResourceCodec" />
+  </bean>
+
+  <!-- DescribeEOCoverageSet -->
+  <bean id="wcs20describeEOCoverageSetIdKvpParser" class="org.geoserver.ows.FlatKvpParser">
+    <constructor-arg index="0" value="eoId" />
+    <constructor-arg index="1" value="java.lang.String" />
+    <property name="service" value="WCS" />
+    <property name="request" value="DescribeEOCoverageSet" />
+  </bean>
+  <bean id="wcs20DescribeEOCoverageSetKvpReader"
+    class="org.geoserver.wcs2_0.eo.kvp.WCS20DescribeEOCoverageSetRequestReader" />
+
+<!-- 
+  <bean id="wcs201DescribeCoverageRequestReader" class="org.geoserver.wcs2_0.xml.WcsXmlReader">
+    <constructor-arg value="DescribeCoverage" />
+    <constructor-arg value="2.0.1" />
+    <constructor-arg ref="wcs-2.0.1-configuration" />
+  </bean>
+   -->
+
+  <bean id="wcs20DescribeEOCoverageSetResponse"
+    class="org.geoserver.wcs2_0.eo.response.WCS20DescribeEOCoverageSetResponse"/>
+
 
 </beans>

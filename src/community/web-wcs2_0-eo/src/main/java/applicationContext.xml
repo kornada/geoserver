@@ -6,7 +6,22 @@
 
 <beans>
 
-  <bean id="wcsEoExtendedCapsProvider"
-    class="org.geoserver.wcs2_0.eo.WCSEOExtendedCapabilitiesProvider" />
+  <bean id="wcseoAdminPanel" class="org.geoserver.web.services.AdminPagePanelInfo">
+    <property name="id" value="wcseoAdminPanel"/>
+    <property name="titleKey" value="wcseo"/>
+    <property name="componentClass" value="org.geoserver.wcs2_0.eo.web.WCSEOAdminPanel"/>
+    <property name="serviceClass" value="org.geoserver.wcs.WCSInfo"/>
+  </bean>
+  
+    <bean id="wcsEoLayerConfig" class="org.geoserver.web.publish.LayerConfigurationPanelInfo">
+    <property name="id" value="wcsEoResourceConfig"/>
+    <property name="titleKey" value="data.resource.config.wcs"/>
+    <property name="componentClass" value="org.geoserver.wcs2_0.eo.web.WCSEOLayerConfig"/>
+    <property name="supportedTypes">
+      <list>  
+        <value>org.geoserver.catalog.CoverageInfo</value>
+      </list>
+    </property>
+  </bean>
 
 </beans>

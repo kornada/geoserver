@@ -114,6 +114,7 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
         private GetCapabilitiesType request;
         private List<WCSExtendedCapabilitiesProvider> extensions;
         private org.geoserver.ExtendedCapabilitiesProvider.Translator translator;
+        private TranslatorHelper helper;
 
         /**
          * Creates a new WFSCapsTranslator object.
@@ -123,6 +124,7 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
          */
         public WCS20GetCapabilitiesTranslator(ContentHandler handler) {
             super(handler, null, null);
+            this.helper = new TranslatorHelper();
             this.extensions = GeoServerExtensions.extensions(WCSExtendedCapabilitiesProvider.class);
             // register namespaces provided by extended capabilities
             NamespaceSupport namespaces = getNamespaceSupport();
@@ -215,11 +217,10 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
             final AttributesImpl attributes = WCS20Const.getDefaultNamespaces();
             attributes.addAttribute("", "version", "version", "", CUR_VERSION);
             attributes.addAttribute("", "updateSequence", "updateSequence", "", String.valueOf(updateSequence));
-            registerNamespaces(attributes);
+            helper.registerNamespaces(getNamespaceSupport(), attributes);
             
             // TODO: add a config to choose the canonical or local schema 
-            StringBuilder locationBuilder = new StringBuilder(WCS.NAMESPACE).append(" http://schemas.opengis.net/wcs/2.0/wcsGetCapabilities.xsd");
-            String location = addExtensionSchemaLocation(locationBuilder, request.getBaseUrl());
+            String location = buildSchemaLocation(request.getBaseUrl(), WCS.NAMESPACE, "http://schemas.opengis.net/wcs/2.0/wcsGetCapabilities.xsd");
             
             // final String locationDef = WCS.NAMESPACE + " " + buildSchemaURL(request.getBaseUrl(), "wcs/2.0/wcsGetCapabilities.xsd");//
             attributes.addAttribute("", "xsi:schemaLocation", "xsi:schemaLocation", "", location);
@@ -246,42 +247,14 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
             end("wcs:Capabilities");
         }
         
-        String addExtensionSchemaLocation(StringBuilder schemaLocation, String schemaBaseURL) {
+        String buildSchemaLocation(String schemaBaseURL, String... locations) {
             for (WCSExtendedCapabilitiesProvider cp : extensions) {
-                String[] locations = cp.getSchemaLocations(schemaBaseURL);
-                try {
-                    for (int i = 0; i < locations.length - 1; i += 2) {
-                        schemaLocation.append(" ");
-                        schemaLocation.append(locations[i]).append(" ").append(locations[i + 1]);
-                    }
-                } catch (ArrayIndexOutOfBoundsException e) {
-                    throw new ServiceException(
-                            "Extended capabilities provider returned improper "
-                                    + "set of namespace,location pairs from getSchemaLocations()",
-                            e);
-                }
+                locations = helper.append(locations, cp.getSchemaLocations(schemaBaseURL));
             }
 
-            return schemaLocation.toString();
+            return helper.buildSchemaLocation(locations);
         }
         
-        void registerNamespaces(AttributesImpl attributes) {
-            Enumeration declaredPrefixes = getNamespaceSupport().getDeclaredPrefixes();
-            while(declaredPrefixes.hasMoreElements()) {
-                String prefix = (String) declaredPrefixes.nextElement();
-                String uri = getNamespaceSupport().getURI(prefix);
-
-                //ignore xml prefix
-                if ("xml".equals(prefix)) {
-                    continue;
-                }
-
-                String prefixDef = "xmlns:" + prefix;
-
-                attributes.addAttribute("", prefixDef, prefixDef, "", uri);
-            }
-        }
-
         private void handleServiceMetadata(GetCapabilitiesType ct) {
             start("wcs:ServiceMetadata");
             
