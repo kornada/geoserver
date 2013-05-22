@@ -296,6 +296,7 @@ public class GetCoverage {
         gcr.setSpatialInterpolation(spatialInterpolation);
         gcr.setSpatialSubset(subset);
         gcr.setTemporalSubset(timeSubset);
+        gcr.setFilter(request.getFilter());
 
         return gcr;
     }
@@ -650,6 +651,11 @@ public class GetCoverage {
             readParameters = CoverageUtils.mergeParameter(descriptors, readParameters, times, "TIME", "Time");
         }
         
+        // handle filter
+        if(request.getFilter() != null) {
+            List<GeneralParameterDescriptor> descriptors = readParametersDescriptor.getDescriptor().descriptors();
+            readParameters = CoverageUtils.mergeParameter(descriptors, readParameters, request.getFilter(), "Filter");
+        }
 
         GridCoverage2D coverage=null;
         //

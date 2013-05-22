@@ -5,6 +5,7 @@
 package org.geoserver.wcs2_0.eo;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.logging.Logger;
 
 import org.geoserver.catalog.Catalog;
@@ -15,7 +16,10 @@ import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.wcs2_0.util.NCNameResourceCodec;
 import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
+import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.util.logging.Logging;
+import org.opengis.filter.Filter;
+import org.opengis.filter.FilterFactory;
 
 /**
  * Utility class that maps the coverage data sets and child coverage names
@@ -25,6 +29,8 @@ import org.geotools.util.logging.Logging;
  */
 public class EOCoverageResourceCodec {
     private static Logger LOGGER = Logging.getLogger(EOCoverageResourceCodec.class);
+    
+    private static FilterFactory FF = CommonFactoryFinder.getFilterFactory2();
 
     private static final String DATASET_SUFFIX = "_dss";
     
@@ -98,5 +104,52 @@ public class EOCoverageResourceCodec {
      */
     public String getGranuleId(CoverageInfo coverage, String featureId) {
         return NCNameResourceCodec.encode(coverage) + GRANULE_SEPARATOR + featureId;
+    }
+
+    /**
+     * Returns the coverage containing the specified coverage, or null if the syntax is incorrect,
+     * the coverage does not exist, or it's not a dataset
+     */
+    public CoverageInfo getGranuleCoverage(String granuleId) {
+        // does it have the expected lexical structure?
+        if(!granuleId.contains(GRANULE_SEPARATOR)) {
+            return null;
+        }
+        String[] splitted = granuleId.split(GRANULE_SEPARATOR);
+        if(splitted.length != 2) {
+            return null;
+        }
+        
+        // do we have the coverage?
+        LayerInfo li = NCNameResourceCodec.getCoverage(catalog, splitted[0]);
+        if(li == null) {
+            return null;
+        }
+        
+        // is it a EO dataset?
+        CoverageInfo ci = (CoverageInfo) li.getResource();
+        if(isValidDataset(ci)) {
+            return ci;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Given a valid granule id returns a Filter to extract it from the structured grid coverage reader
+     * @param coverageId
+     * @return
+     */
+    public Filter getGranuleFilter(String granuleId) {
+        // does it have the expected lexical structure?
+        if(!granuleId.contains(GRANULE_SEPARATOR)) {
+            throw new IllegalArgumentException("Not a valid granule id: " + granuleId);
+        }
+        String[] splitted = granuleId.split(GRANULE_SEPARATOR);
+        if(splitted.length != 2) {
+            throw new IllegalArgumentException("Not a valid granule id: " + granuleId);
+        }
+        
+        return FF.id(Collections.singleton(FF.featureId(splitted[1])));
     }
 }

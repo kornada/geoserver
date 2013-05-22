@@ -266,7 +266,9 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
                             + ci.prefixedName(), e);
                 } finally {
                     try {
-                        source.dispose();
+                        if(source != null) {
+                            source.dispose();
+                        }
                     } catch (IOException e) {
                         LOGGER.log(Level.FINE, "Failed to dispose granule source", e);
                     }

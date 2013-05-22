@@ -86,11 +86,11 @@ public class WCSEOExtendedCapabilitiesProvider extends WCSExtendedCapabilitiesPr
     @Override
     public void encodeExtendedContents(org.geoserver.ExtendedCapabilitiesProvider.Translator tx,
             WCSInfo wfs, List<CoverageInfo> coverages, GetCapabilitiesType request) throws IOException {
-        tx.start("wcseo:DatasetSeriesSummary");
         for (CoverageInfo ci : coverages) {
             Boolean dataset = ci.getMetadata().get(WCSEOMetadata.DATASET.key, Boolean.class);
             DimensionInfo time = ci.getMetadata().get(ResourceInfo.TIME, DimensionInfo.class);
             if(dataset != null && dataset && time != null & time.isEnabled()) {
+                tx.start("wcseo:DatasetSeriesSummary");
                 ReferencedEnvelope bbox = ci.getLatLonBoundingBox();
                 tx.start("ows:WGS84BoundingBox");
                 element(tx, "ows:LowerCorner", bbox.getMinX() + " " + bbox.getMinY(), null);
@@ -105,9 +105,9 @@ public class WCSEOExtendedCapabilitiesProvider extends WCSExtendedCapabilitiesPr
                 element(tx, "gml:beginPosition", timeHelper.getBeginPosition(), null);
                 element(tx, "gml:endPosition", timeHelper.getEndPosition(), null);
                 tx.end("gml:TimePeriod");
+                tx.end("wcseo:DatasetSeriesSummary");
             }
         }
-        tx.end("wcseo:DatasetSeriesSummary");
     }
     
     private void element(org.geoserver.ExtendedCapabilitiesProvider.Translator tx, String element,

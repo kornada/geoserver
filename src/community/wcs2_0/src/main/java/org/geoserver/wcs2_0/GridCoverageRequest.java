@@ -8,6 +8,7 @@ import javax.media.jai.Interpolation;
 
 import org.geotools.geometry.GeneralEnvelope;
 import org.geotools.util.DateRange;
+import org.opengis.filter.Filter;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 /**
@@ -28,6 +29,8 @@ public class GridCoverageRequest {
     Interpolation spatialInterpolation;
     
     Interpolation temporalInterpolation;
+    
+    Filter filter;
 
     public GeneralEnvelope getSpatialSubset() {
         return spatialSubset;
@@ -67,6 +70,14 @@ public class GridCoverageRequest {
 
     public void setTemporalInterpolation(Interpolation temporalInterpolation) {
         this.temporalInterpolation = temporalInterpolation;
+    }
+
+    public Filter getFilter() {
+        return filter;
+    }
+
+    public void setFilter(Filter filter) {
+        this.filter = filter;
     }
     
     

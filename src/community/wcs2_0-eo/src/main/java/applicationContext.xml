@@ -9,6 +9,10 @@
   <bean id="wcsEoCoverageResourceCodec" class="org.geoserver.wcs2_0.eo.EOCoverageResourceCodec">
     <constructor-arg index="0" ref="catalog" />
   </bean>
+  
+  <bean id="wcsEoGetCoverageCallback" class="org.geoserver.wcs2_0.eo.GetCoverageEOCallback">
+    <constructor-arg index="0" ref="wcsEoCoverageResourceCodec"/>
+  </bean>
 
   <bean id="wcsEoExtendedCapsProvider"
     class="org.geoserver.wcs2_0.eo.response.WCSEOExtendedCapabilitiesProvider">
