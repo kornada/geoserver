@@ -275,7 +275,8 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
                 try {
                     StructuredGridCoverage2DReader reader = (StructuredGridCoverage2DReader) ci
                             .getGridCoverageReader(null, null);
-                    source = reader.getGranules(ci.getNativeCoverageName(), true);
+                    String name = ci.getNativeCoverageName() != null ? ci.getNativeCoverageName() : reader.getGridCoverageNames()[0];
+                    source = reader.getGranules(name, true);
                     // TODO : filter based on dimension trimming
                     SimpleFeatureCollection collection = source.getGranules(Query.ALL);
 

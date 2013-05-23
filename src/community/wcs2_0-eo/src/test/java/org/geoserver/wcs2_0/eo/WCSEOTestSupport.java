@@ -4,6 +4,8 @@
  */
 package org.geoserver.wcs2_0.eo;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -31,6 +33,7 @@ import org.geoserver.test.GeoServerSystemTestSupport;
 import org.geoserver.wcs.CoverageCleanerCallback;
 import org.geoserver.wcs.WCSInfo;
 import org.junit.After;
+import org.junit.Before;
 import org.opengis.coverage.grid.GridCoverage;
 
 import com.mockrunner.mock.web.MockHttpServletResponse;
@@ -102,6 +105,8 @@ public abstract class WCSEOTestSupport extends GeoServerSystemTestSupport {
         namespaces.put("gml", "http://www.opengis.net/gml/3.2");
         namespaces.put("wcsgs", "http://www.geoserver.org/wcsgs/2.0");
         namespaces.put("wcseo", "http://www.opengis.net/wcseo/1.0");
+        namespaces.put("eop", "http://www.opengis.net/eop/2.0");
+        namespaces.put("om", "http://www.opengis.net/om/2.0");
         XMLUnit.setXpathNamespaceContext(new SimpleNamespaceContext(namespaces));
         xpath = XMLUnit.newXpathEngine();
     }
@@ -185,6 +190,26 @@ public abstract class WCSEOTestSupport extends GeoServerSystemTestSupport {
         ci.getMetadata().put(WCSEOMetadata.DATASET.key, true);
         getCatalog().save(ci);
         setupRasterDimension(coverageName, ResourceInfo.TIME, DimensionPresentation.LIST, null);
+    }
+
+    @Before
+    public void enableWCSEO() {
+        WCSInfo wcs = getGeoServer().getService(WCSInfo.class);
+        wcs.getMetadata().put(WCSEOMetadata.ENABLED.key, true);
+        wcs.getMetadata().put(WCSEOMetadata.COUNT_DEFAULT.key, String.valueOf(20));
+        wcs.getSRS().clear();
+        wcs.getSRS().add("4326");
+        wcs.getSRS().add("3857");
+        getGeoServer().save(wcs);
+        
+        wcs = getGeoServer().getService(WCSInfo.class);
+        assertTrue(wcs.getMetadata().get(WCSEOMetadata.ENABLED.key, Boolean.class));
+    }
+    
+    @Before
+    public void enableEODatasets() {
+        enableEODataset(getLayerId(WATTEMP));
+        enableEODataset(getLayerId(TIMERANGES));
     }
 
 

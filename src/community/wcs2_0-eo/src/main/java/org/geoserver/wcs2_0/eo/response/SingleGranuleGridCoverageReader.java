@@ -14,6 +14,7 @@ import javax.media.jai.ImageLayout;
 
 import org.geoserver.util.ISO8601Formatter;
 import org.geotools.coverage.grid.GridCoverage2D;
+import org.geotools.coverage.grid.io.DimensionDescriptor;
 import org.geotools.coverage.grid.io.GranuleSource;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.coverage.grid.io.HarvestedFile;
@@ -240,6 +241,11 @@ public class SingleGranuleGridCoverageReader implements StructuredGridCoverage2D
 
     public double[][] getResolutionLevels(String coverageName) throws IOException {
         return reader.getResolutionLevels(coverageName);
+    }
+
+    @Override
+    public List<DimensionDescriptor> getDimensionDescriptors(String coverageName) {
+        return reader.getDimensionDescriptors(coverageName);
     }
 
 }

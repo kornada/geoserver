@@ -1,39 +1,13 @@
 package org.geoserver.wcs2_0.eo;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
-import javax.xml.namespace.QName;
-
-import org.geoserver.data.test.MockData;
 import org.geoserver.wcs.WCSInfo;
-import org.junit.Before;
 import org.junit.Test;
 import org.w3c.dom.Document;
 
 public class GetCapabilitiesTest extends WCSEOTestSupport {
 
-    protected static QName WATTEMP = new QName(MockData.SF_URI, "watertemp", MockData.SF_PREFIX);
-
-    @Before
-    public void enableWCSEO() {
-        WCSInfo wcs = getGeoServer().getService(WCSInfo.class);
-        wcs.getMetadata().put(WCSEOMetadata.ENABLED.key, true);
-        wcs.getMetadata().put(WCSEOMetadata.COUNT_DEFAULT.key, String.valueOf(20));
-        wcs.getSRS().clear();
-        wcs.getSRS().add("4326");
-        wcs.getSRS().add("3857");
-        getGeoServer().save(wcs);
-        
-        wcs = getGeoServer().getService(WCSInfo.class);
-        assertTrue(wcs.getMetadata().get(WCSEOMetadata.ENABLED.key, Boolean.class));
-    }
-    
-    @Before
-    public void enableEODatasets() {
-        enableEODataset(getLayerId(WATTEMP));
-        enableEODataset(getLayerId(TIMERANGES));
-    }
 
     @Test
     public void testEOExtensions() throws Exception {
