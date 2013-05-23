@@ -4,7 +4,12 @@
  */
 package org.geoserver.wcs2_0.eo.kvp;
 
+import java.util.Map;
+
+import net.opengis.ows11.SectionsType;
 import net.opengis.wcs20.DescribeEOCoverageSetType;
+import net.opengis.wcs20.Section;
+import net.opengis.wcs20.Sections;
 import net.opengis.wcs20.Wcs20Factory;
 
 import org.geoserver.ows.kvp.EMFKvpRequestReader;
@@ -17,5 +22,19 @@ public class WCS20DescribeEOCoverageSetRequestReader extends EMFKvpRequestReader
 
     public WCS20DescribeEOCoverageSetRequestReader() {
         super(DescribeEOCoverageSetType.class, Wcs20Factory.eINSTANCE);
+    }
+    
+    @Override
+    public Object read(Object request, Map kvp, Map rawKvp) throws Exception {
+        SectionsType owsSections = (SectionsType) kvp.get("sections");
+        if(owsSections != null) {
+            Sections sections = Wcs20Factory.eINSTANCE.createSections();
+            for(Object o : owsSections.getSection()) {
+                String sectionName = (String) o;
+                sections.getSection().add(Section.get(sectionName));
+            }
+            kvp.put("sections", sections);
+        }
+        return super.read(request, kvp, rawKvp);
     }
 }

@@ -11,6 +11,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import net.opengis.wcs20.DescribeEOCoverageSetType;
+import net.opengis.wcs20.Section;
 
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.DimensionInfo;
@@ -126,8 +127,14 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
             
             List<CoverageGranules> reducedGranules = applyMaxCoverages(coverageGranules, maxCoverages);
             
-            handleCoverageDescriptions(reducedGranules);
-            handleDatasetSeriesDescriptions(coverages);
+            boolean allSections = dcs.getSections() == null || dcs.getSections().getSection() == null ||
+                    dcs.getSections().getSection().contains(Section.ALL);
+            if(allSections || dcs.getSections().getSection().contains(Section.COVERAGEDESCRIPTIONS)) {
+                handleCoverageDescriptions(reducedGranules);
+            }
+            if(allSections || dcs.getSections().getSection().contains(Section.DATASETSERIESDESCRIPTIONS)) {
+                handleDatasetSeriesDescriptions(coverages);
+            }
 
             end("wcseo:EOCoverageSetDescription");
         }
