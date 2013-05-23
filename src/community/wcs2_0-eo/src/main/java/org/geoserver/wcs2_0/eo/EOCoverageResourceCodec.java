@@ -18,6 +18,7 @@ import org.geoserver.wcs2_0.util.NCNameResourceCodec;
 import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.util.logging.Logging;
+import org.opengis.coverage.grid.GridCoverageReader;
 import org.opengis.filter.Filter;
 import org.opengis.filter.FilterFactory;
 
@@ -62,7 +63,8 @@ public class EOCoverageResourceCodec {
         Boolean dataset = ci.getMetadata().get(WCSEOMetadata.DATASET.key, Boolean.class);
         DimensionInfo time = ci.getMetadata().get(ResourceInfo.TIME, DimensionInfo.class);
         try {
-            boolean structured = ci.getGridCoverageReader(null, null) instanceof StructuredGridCoverage2DReader;
+            GridCoverageReader reader = ci.getGridCoverageReader(null, null);
+            boolean structured = reader instanceof StructuredGridCoverage2DReader;
             return dataset != null && dataset && time != null & time.isEnabled()
                     && structured;
         } catch (IOException e) {

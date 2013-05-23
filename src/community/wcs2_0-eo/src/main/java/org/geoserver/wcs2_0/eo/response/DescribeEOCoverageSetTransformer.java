@@ -16,8 +16,10 @@ import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.ows.util.ResponseUtils;
+import org.geoserver.wcs.WCSInfo;
 import org.geoserver.wcs2_0.GetCoverage;
 import org.geoserver.wcs2_0.eo.EOCoverageResourceCodec;
+import org.geoserver.wcs2_0.eo.WCSEOMetadata;
 import org.geoserver.wcs2_0.exception.WCS20Exception;
 import org.geoserver.wcs2_0.response.WCS20DescribeCoverageTransformer;
 import org.geoserver.wcs2_0.response.WCS20DescribeCoverageTransformer.WCS20DescribeCoverageTranslator;
@@ -60,9 +62,12 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
 
     EnvelopeAxesLabelsMapper envelopeAxisMapper;
 
-    public DescribeEOCoverageSetTransformer(EOCoverageResourceCodec codec,
+    WCSInfo wcs;
+
+    public DescribeEOCoverageSetTransformer(WCSInfo wcs, EOCoverageResourceCodec codec,
             EnvelopeAxesLabelsMapper envelopeAxesMapper,
             WCS20DescribeCoverageTransformer dcTransformer) {
+        this.wcs = wcs;
         this.codec = codec;
         this.envelopeAxisMapper = envelopeAxesMapper;
         this.dcTransformer = dcTransformer;
@@ -95,7 +100,7 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
             List<CoverageInfo> coverages = getCoverages(dcs);
             List<CoverageGranules> coverageGranules = getCoverageGranules(coverages);
             int granuleCount = getGranuleCount(coverageGranules);
-            int maxCoverages = 50;
+            Integer maxCoverages = getMaxCoverages(dcs);
             int returned = granuleCount < maxCoverages ? granuleCount : maxCoverages;
 
             String eoSchemaLocation = ResponseUtils.buildSchemaURL(dcs.getBaseUrl(),
@@ -118,6 +123,7 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
 
             start("wcseo:EOCoverageSetDescription", atts);
 
+            
             List<CoverageGranules> reducedGranules = applyMaxCoverages(coverageGranules, maxCoverages);
             
             handleCoverageDescriptions(reducedGranules);
@@ -126,8 +132,22 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
             end("wcseo:EOCoverageSetDescription");
         }
 
+        /**
+         * Returns the max number of coverages to return, if any (null otherwise) 
+         * @param dcs
+         * @return
+         */
+        private Integer getMaxCoverages(DescribeEOCoverageSetType dcs) {
+            if(dcs.getCount() > 0) {
+                return dcs.getCount();
+            } 
+            
+            // fall back on the the default value, it's ok if it's null
+            return wcs.getMetadata().get(WCSEOMetadata.COUNT_DEFAULT.key, Integer.class);
+        }
+
         private List<CoverageGranules> applyMaxCoverages(List<CoverageGranules> coverageGranules,
-                int maxCoverages) {
+                Integer maxCoverages) {
             List<CoverageGranules> result = new ArrayList<DescribeEOCoverageSetTransformer.CoverageGranules>();
             for (CoverageGranules cg : coverageGranules) {
                 int size = cg.granules.size();

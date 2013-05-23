@@ -63,10 +63,15 @@ public class DescribeEOCoverageSetInterceptor implements MethodInterceptor {
     public WCSInfo getServiceInfo() {
         return geoServer.getService(WCSInfo.class);
     }
+    
+    private boolean isEarthObservationEnabled() {
+        WCSInfo wcs = getServiceInfo();
+        return wcs.getMetadata().get(WCSEOMetadata.ENABLED.key, Boolean.class) == Boolean.TRUE;
+    }
 
     @Override
     public Object invoke(MethodInvocation invocation) throws Throwable {
-        if (invocation.getMethod().getName().equals("describeEOCoverageSet")) {
+        if (invocation.getMethod().getName().equals("describeEOCoverageSet") && isEarthObservationEnabled()) {
             try {
                 DescribeEOCoverageSetType dcs = (DescribeEOCoverageSetType) invocation
                         .getArguments()[0];
@@ -109,17 +114,7 @@ public class DescribeEOCoverageSetInterceptor implements MethodInterceptor {
 
         WCS20DescribeCoverageTransformer tx = new WCS20DescribeCoverageTransformer(
                 getServiceInfo(), catalog, responseFactory, envelopeAxesMapper, mimemapper);
-        return new DescribeEOCoverageSetTransformer(resourceCodec, envelopeAxesMapper, tx);
-
-        // WCSInfo wcs = getServiceInfo();
-        //
-        // WCS20DescribeCoverageTransformer describeTransformer = new
-        // WCS20DescribeCoverageTransformer(
-        // wcs, catalog, responseFactory, envelopeAxesMapper, mimemapper);
-        // describeTransformer.setEncoding(Charset.forName(wcs.getGeoServer().getSettings()
-        // .getCharset()));
-        // return describeTransformer;
-
+        return new DescribeEOCoverageSetTransformer(getServiceInfo(), resourceCodec, envelopeAxesMapper, tx);
     }
 
 }

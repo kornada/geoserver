@@ -58,6 +58,11 @@ public class WCSEOExtendedCapabilitiesProvider extends WCSExtendedCapabilitiesPr
     @Override
     public void encodeExtendedOperations(org.geoserver.ExtendedCapabilitiesProvider.Translator tx,
             WCSInfo wcs, GetCapabilitiesType request) throws IOException {
+        Boolean enabled = wcs.getMetadata().get(WCSEOMetadata.ENABLED.key, Boolean.class);
+        if(enabled == null || !enabled) {
+            return;
+        }
+        
         AttributesImpl attributes = new AttributesImpl();
         attributes.addAttribute(null, "name", "name", null, "DescribeEOCoverageSet");
         tx.start("ows:Operation", attributes);
@@ -81,15 +86,28 @@ public class WCSEOExtendedCapabilitiesProvider extends WCSExtendedCapabilitiesPr
         tx.end("ows:DCP");
         
         tx.end("ows:Operation");
+        
+        Integer defaultCount = wcs.getMetadata().get(WCSEOMetadata.COUNT_DEFAULT.key, Integer.class);
+        if(defaultCount != null) {
+            tx.start("ows:Constraint", atts("name", "CountDefault"));
+            element(tx, "ows:NoValues", null, null);
+            element(tx, "ows:DefaultValue", String.valueOf(defaultCount), null);
+            tx.end("ows:Constraint");
+        }
     }
 
     @Override
     public void encodeExtendedContents(org.geoserver.ExtendedCapabilitiesProvider.Translator tx,
-            WCSInfo wfs, List<CoverageInfo> coverages, GetCapabilitiesType request) throws IOException {
+            WCSInfo wcs, List<CoverageInfo> coverages, GetCapabilitiesType request) throws IOException {
+        Boolean enabled = wcs.getMetadata().get(WCSEOMetadata.ENABLED.key, Boolean.class);
+        if(enabled == null || !enabled) {
+            return;
+        }
+        
         for (CoverageInfo ci : coverages) {
             Boolean dataset = ci.getMetadata().get(WCSEOMetadata.DATASET.key, Boolean.class);
             DimensionInfo time = ci.getMetadata().get(ResourceInfo.TIME, DimensionInfo.class);
-            if(dataset != null && dataset && time != null & time.isEnabled()) {
+            if(dataset != null && dataset && time != null && time.isEnabled()) {
                 tx.start("wcseo:DatasetSeriesSummary");
                 ReferencedEnvelope bbox = ci.getLatLonBoundingBox();
                 tx.start("ows:WGS84BoundingBox");
