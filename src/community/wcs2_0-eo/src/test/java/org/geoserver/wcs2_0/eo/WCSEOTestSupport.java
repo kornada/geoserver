@@ -49,6 +49,8 @@ public abstract class WCSEOTestSupport extends GeoServerSystemTestSupport {
     protected static QName TIMERANGES = new QName(MockData.SF_URI, "timeranges", MockData.SF_PREFIX);
 
     protected static QName WATTEMP = new QName(MockData.SF_URI, "watertemp", MockData.SF_PREFIX);
+    
+    protected static QName SPATIO_TEMPORAL = new QName(MockData.SF_URI, "spatio-temporal", MockData.SF_PREFIX);
 
     
     protected static XpathEngine xpath;
@@ -91,6 +93,8 @@ public abstract class WCSEOTestSupport extends GeoServerSystemTestSupport {
         super.onSetUp(testData);
         testData.addRasterLayer(TIMERANGES, "timeranges.zip", null, null, SystemTestData.class, getCatalog());
         testData.addRasterLayer(WATTEMP, "watertemp.zip", null, null, SystemTestData.class,
+                getCatalog());
+        testData.addRasterLayer(SPATIO_TEMPORAL, "spatio-temporal.zip", null, null, SystemTestData.class,
                 getCatalog());
 
         // init xmlunit
@@ -210,6 +214,9 @@ public abstract class WCSEOTestSupport extends GeoServerSystemTestSupport {
     public void enableEODatasets() {
         enableEODataset(getLayerId(WATTEMP));
         enableEODataset(getLayerId(TIMERANGES));
+        String spatioTemporal = getLayerId(SPATIO_TEMPORAL);
+        enableEODataset(spatioTemporal);
+        setupRasterDimension(spatioTemporal, ResourceInfo.ELEVATION, DimensionPresentation.LIST, null);
     }
 
 
