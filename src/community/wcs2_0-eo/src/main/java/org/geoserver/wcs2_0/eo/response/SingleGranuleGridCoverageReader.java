@@ -244,7 +244,7 @@ public class SingleGranuleGridCoverageReader implements StructuredGridCoverage2D
     }
 
     @Override
-    public List<DimensionDescriptor> getDimensionDescriptors(String coverageName) {
+    public List<DimensionDescriptor> getDimensionDescriptors(String coverageName) throws IOException {
         return reader.getDimensionDescriptors(coverageName);
     }
 

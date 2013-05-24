@@ -413,6 +413,30 @@ public abstract class WCSTestSupport extends GeoServerSystemTestSupport {
     }
     
     /**
+     * Configures the specified dimension for a coverage
+     * 
+     * @param coverageName
+     * @param metadataKey
+     * @param presentation
+     * @param resolution
+     * @param unitSymbol
+     */
+    protected void setupRasterDimension(String coverageName, String metadataKey, DimensionPresentation presentation, Double resolution, String unitSymbol) {
+        CoverageInfo info = getCatalog().getCoverageByName(coverageName);
+        DimensionInfo di = new DimensionInfoImpl();
+        di.setEnabled(true);
+        di.setPresentation(presentation);
+        if(resolution != null) {
+            di.setResolution(new BigDecimal(resolution));
+        }
+        if(unitSymbol != null) {
+            di.setUnitSymbol(unitSymbol);
+        }
+        info.getMetadata().put(metadataKey, di);
+        getCatalog().save(info);
+    }
+    
+    /**
      * Clears dimension information from the specified coverage
      * 
      * @param coverageName

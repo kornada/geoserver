@@ -23,7 +23,7 @@ import org.geoserver.wcs2_0.eo.WCSEOMetadata;
 import org.geoserver.wcs2_0.exception.WCS20Exception;
 import org.geoserver.wcs2_0.response.WCS20DescribeCoverageTransformer;
 import org.geoserver.wcs2_0.response.WCS20DescribeCoverageTransformer.WCS20DescribeCoverageTranslator;
-import org.geoserver.wcs2_0.response.WCSTimeDimensionHelper;
+import org.geoserver.wcs2_0.response.WCSDimensionsHelper;
 import org.geoserver.wcs2_0.util.EnvelopeAxesLabelsMapper;
 import org.geotools.coverage.grid.io.GranuleSource;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
@@ -182,8 +182,8 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
                     
                     // encode the time
                     DimensionInfo time = ci.getMetadata().get(ResourceInfo.TIME, DimensionInfo.class);
-                    WCSTimeDimensionHelper timeHelper = new WCSTimeDimensionHelper(time, reader, datasetId);
-                    dcTranslator.encodeTimePeriod(timeHelper.getBeginPosition(), timeHelper.getEndPosition(), datasetId + "_timeperiod", null, null);
+                    WCSDimensionsHelper timeHelper = new WCSDimensionsHelper(time, reader, datasetId);
+                    dcTranslator.encodeTimePeriod(timeHelper.getBeginTime(), timeHelper.getEndTime(), datasetId + "_timeperiod", null, null);
 
                     end("wcseo:DatasetSeriesDescription");
                 } catch (IOException e) {

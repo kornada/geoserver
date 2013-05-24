@@ -21,8 +21,8 @@ import org.geoserver.ows.util.ResponseUtils;
 import org.geoserver.wcs.WCSInfo;
 import org.geoserver.wcs2_0.eo.EOCoverageResourceCodec;
 import org.geoserver.wcs2_0.eo.WCSEOMetadata;
+import org.geoserver.wcs2_0.response.WCSDimensionsHelper;
 import org.geoserver.wcs2_0.response.WCSExtendedCapabilitiesProvider;
-import org.geoserver.wcs2_0.response.WCSTimeDimensionHelper;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.xml.sax.Attributes;
@@ -116,18 +116,19 @@ public class WCSEOExtendedCapabilitiesProvider extends WCSExtendedCapabilitiesPr
                 tx.end("ows:WGS84BoundingBox");
                 String datasetId = codec.getDatasetName(ci);
                 element(tx, "wcseo:DatasetSeriesId", datasetId, null);
-                
+
                 GridCoverage2DReader reader = (GridCoverage2DReader) ci.getGridCoverageReader(null, null);
-                WCSTimeDimensionHelper timeHelper = new WCSTimeDimensionHelper(time, reader, null);
+
+                WCSDimensionsHelper dimensionsHelper = new WCSDimensionsHelper(time, reader, null);
                 tx.start("gml:TimePeriod", atts("gml:id", datasetId + "__timeperiod"));
-                element(tx, "gml:beginPosition", timeHelper.getBeginPosition(), null);
-                element(tx, "gml:endPosition", timeHelper.getEndPosition(), null);
+                element(tx, "gml:beginPosition", dimensionsHelper.getBeginTime(), null);
+                element(tx, "gml:endPosition", dimensionsHelper.getEndTime(), null);
                 tx.end("gml:TimePeriod");
                 tx.end("wcseo:DatasetSeriesSummary");
             }
         }
     }
-    
+
     private void element(org.geoserver.ExtendedCapabilitiesProvider.Translator tx, String element,
             String content, AttributesImpl attributes) {
         tx.start(element, attributes);
@@ -136,7 +137,7 @@ public class WCSEOExtendedCapabilitiesProvider extends WCSExtendedCapabilitiesPr
         }
         tx.end(element);
     }
-    
+
     Attributes atts(String... atts) {
         AttributesImpl attributes = new AttributesImpl();
         for (int i = 0; i < atts.length; i += 2) {
