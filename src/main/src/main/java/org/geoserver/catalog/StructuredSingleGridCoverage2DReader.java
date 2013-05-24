@@ -65,7 +65,7 @@ public class StructuredSingleGridCoverage2DReader extends SingleGridCoverage2DRe
     }
 
     @Override
-    public List<DimensionDescriptor> getDimensionDescriptors(String coverageName) {
+    public List<DimensionDescriptor> getDimensionDescriptors(String coverageName) throws IOException {
         if(coverageName == null) {
             coverageName = this.coverageName;
         }
