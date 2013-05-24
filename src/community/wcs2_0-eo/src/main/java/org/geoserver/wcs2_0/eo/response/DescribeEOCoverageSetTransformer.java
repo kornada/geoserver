@@ -271,7 +271,7 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
                         SimpleFeature f = features.next();
                         String granuleId = codec.getGranuleId(cg.coverage, f.getID());
                         dcTranslator.handleCoverageDescription(granuleId, new GranuleCoverageInfo(
-                                cg.coverage, f));
+                                cg.coverage, f, cg.timeDimensionDescriptor));
                     }
                 } finally {
                     if (features != null) {
@@ -322,7 +322,8 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
 
                     // only report in output coverages that have at least one matched granule
                     if(!collection.isEmpty()) {
-                        CoverageGranules granules = new CoverageGranules(ci, reader, collection);
+                        DimensionDescriptor time = getTimeDescriptor(reader, name);
+                        CoverageGranules granules = new CoverageGranules(ci, name, reader, collection, time);
                         results.add(granules);
                     }
                 } catch (IOException e) {
@@ -341,9 +342,24 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
 
             return results;
         }
+        
+        public DimensionDescriptor getTimeDescriptor(StructuredGridCoverage2DReader reader, String coverageName) {
+            try {
+                List<DimensionDescriptor> descriptors = reader.getDimensionDescriptors(coverageName);
+                for (DimensionDescriptor dd : descriptors) {
+                    if (dd.getName().equalsIgnoreCase("TIME")) {
+                        return dd;
+                    }
+                }
+
+                return null;
+            } catch(IOException e) {
+                throw new WCS20Exception("Failed to locate the reader's time dimension descriptor", e);
+            }
+        }
 
         private Query buildQueryFromDimensionTrims(DescribeEOCoverageSetType dcs,
-                StructuredGridCoverage2DReader reader, String coverageName) {
+                StructuredGridCoverage2DReader reader, String coverageName) throws IOException {
             // no selection, get all
             if (dcs.getDimensionTrim() == null || dcs.getDimensionTrim().size() == 0) {
                 return Query.ALL;
@@ -466,18 +482,6 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
             return new Query(null, filter);
         }
 
-        private DimensionDescriptor getTimeDescriptor(StructuredGridCoverage2DReader reader,
-                String coverageName) {
-            List<DimensionDescriptor> descriptors = reader.getDimensionDescriptors(coverageName);
-            for (DimensionDescriptor dd : descriptors) {
-                if (dd.getName().equalsIgnoreCase("TIME")) {
-                    return dd;
-                }
-            }
-
-            return null;
-        }
-
         private DateRange parseDateRange(DimensionTrimType trim) {
             DatatypeConverterImpl xmlTimeConverter = DatatypeConverterImpl.getInstance();
             try {
@@ -534,11 +538,17 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
 
         SimpleFeatureCollection granules;
 
-        public CoverageGranules(CoverageInfo coverage, StructuredGridCoverage2DReader reader,
-                SimpleFeatureCollection granules) {
+        private String name;
+
+        private DimensionDescriptor timeDimensionDescriptor;
+
+        public CoverageGranules(CoverageInfo coverage, String name, StructuredGridCoverage2DReader reader,
+                SimpleFeatureCollection granules, DimensionDescriptor timeDimensionDescriptor) {
             this.coverage = coverage;
+            this.name = name;
             this.reader = reader;
             this.granules = granules;
+            this.timeDimensionDescriptor = timeDimensionDescriptor;
         }
 
     }

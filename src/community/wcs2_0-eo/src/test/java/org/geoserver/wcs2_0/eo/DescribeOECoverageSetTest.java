@@ -213,27 +213,29 @@ public class DescribeOECoverageSetTest extends WCSEOTestSupport {
         assertEquals("0", xpath.evaluate("count(//wcseo:DatasetSeriesDescriptions)", dom));
     }
     
-//    @Test
-//    public void testTimeTrimContains() throws Exception {
-//        // contains first half, contains none
-//        Document dom = getAsDOM("wcs?request=DescribeEOCoverageSet&version=2.0.1&service=WCS&eoid=sf__timeranges_dss");
-//        print(dom);
-//                // "&subset=phenomenonTime(\"2008-10-31T00:00:00.000Z\",\"2008-10-31T23:59:00.000Z\")&containment=contains");
-//        assertEquals("0", xpath.evaluate("count(//wcs:CoverageDescriptions/wcs:CoverageDescription)", dom));
-//        assertEquals("0", xpath.evaluate("count(//wcseo:DatasetSeriesDescriptions)", dom));
-//        
-//        
-//        // overlaps with second half, contains none
-//        dom = getAsDOM("wcs?request=DescribeEOCoverageSet&version=2.0.1&service=WCS&eoid=sf__spatio-temporal_dss" +
-//                "&subset=phenomenonTime(\"2008-11-01T00:00:00.000Z\",\"2008-11-01T01:00:00.000Z\")&containment=contains");
-//        assertEquals("0", xpath.evaluate("count(//wcs:CoverageDescriptions/wcs:CoverageDescription)", dom));
-//        assertEquals("0", xpath.evaluate("count(//wcseo:DatasetSeriesDescriptions)", dom));
-//        
-//        // contains first half, overlaps but does not contain the second
-//        dom = getAsDOM("wcs?request=DescribeEOCoverageSet&version=2.0.1&service=WCS&eoid=sf__spatio-temporal_dss" +
-//                "&subset=phenomenonTime(\"2008-10-30T00:00:00.000Z\",\"2008-11-01T02:00:00.000Z\")&containment=contains");
-//        assertEquals("8", xpath.evaluate("count(//wcs:CoverageDescriptions/wcs:CoverageDescription)", dom));
-//        assertEquals("1", xpath.evaluate("count(//wcseo:DatasetSeriesDescriptions)", dom));
-//    }
+    @Test
+    public void testTimeIntervalTrimContains() throws Exception {
+        // overlaps with some, contains none
+        Document dom = getAsDOM("wcs?request=DescribeEOCoverageSet&version=2.0.1&service=WCS&eoid=sf__timeranges_dss" + 
+           "&subset=phenomenonTime(\"2008-10-31T00:00:00.000Z\",\"2008-10-31T23:59:00.000Z\")&containment=contains");
+        assertEquals("0", xpath.evaluate("count(//wcs:CoverageDescriptions/wcs:CoverageDescription)", dom));
+        assertEquals("0", xpath.evaluate("count(//wcseo:DatasetSeriesDescriptions)", dom));
+        
+        // contains a bunch
+        dom = getAsDOM("wcs?request=DescribeEOCoverageSet&version=2.0.1&service=WCS&eoid=sf__timeranges_dss" +
+                "&subset=phenomenonTime(\"2008-10-30T00:00:00.000Z\",\"2008-11-03T00:00:00.000Z\")&containment=contains");
+        print(dom);
+        assertEquals("4", xpath.evaluate("count(//wcs:CoverageDescriptions/wcs:CoverageDescription)", dom));
+        assertEquals("1", xpath.evaluate("count(//wcseo:DatasetSeriesDescriptions)", dom));
+    }
+    
+    @Test
+    public void testMixedTrim() throws Exception {
+        // 
+        Document dom = getAsDOM("wcs?request=DescribeEOCoverageSet&version=2.0.1&service=WCS&eoid=sf__spatio-temporal_dss" +
+        		"&subset=Long(1,5)&subset=Lat(40,41)&subset=phenomenonTime(\"2008-10-31T00:00:00.000Z\",\"2008-10-31T23:59:00.000Z\")");
+        print(dom);
+        assertEquals("2", xpath.evaluate("count(//wcs:CoverageDescriptions/wcs:CoverageDescription)", dom));
+    }
 
 }
