@@ -20,12 +20,13 @@ public class GetCapabilitiesTest extends WCSEOTestSupport {
         assertEquals("20", xpath.evaluate("//ows:Constraint[@name='CountDefault']/ows:DefaultValue", dom));
         
         // dataset series checks
-        assertEquals("2", xpath.evaluate("count(//wcs:Extension/wcseo:DatasetSeriesSummary)", dom));
+        assertEquals("3", xpath.evaluate("count(//wcs:Extension/wcseo:DatasetSeriesSummary)", dom));
+        // check time ranges
         assertEquals("1", xpath.evaluate("count(//wcs:Extension/wcseo:DatasetSeriesSummary[wcseo:DatasetSeriesId='sf__timeranges_dss'])", dom));
         assertEquals("1", xpath.evaluate("count(//wcs:Extension/wcseo:DatasetSeriesSummary[wcseo:DatasetSeriesId='sf__timeranges_dss']/ows:WGS84BoundingBox)", dom));
         assertEquals("2008-10-31T00:00:00.000Z", xpath.evaluate("//wcs:Extension/wcseo:DatasetSeriesSummary[wcseo:DatasetSeriesId='sf__timeranges_dss']/gml:TimePeriod/gml:beginPosition", dom));
         assertEquals("2008-11-07T00:00:00.000Z", xpath.evaluate("//wcs:Extension/wcseo:DatasetSeriesSummary[wcseo:DatasetSeriesId='sf__timeranges_dss']/gml:TimePeriod/gml:endPosition", dom));
-        assertEquals("1", xpath.evaluate("count(//wcs:Extension/wcseo:DatasetSeriesSummary[wcseo:DatasetSeriesId='sf__watertemp_dss'])", dom));
+        // check water temp
         assertEquals("1", xpath.evaluate("count(//wcs:Extension/wcseo:DatasetSeriesSummary[wcseo:DatasetSeriesId='sf__watertemp_dss'])", dom));
         assertEquals("1", xpath.evaluate("count(//wcs:Extension/wcseo:DatasetSeriesSummary[wcseo:DatasetSeriesId='sf__watertemp_dss']/ows:WGS84BoundingBox)", dom));
         assertEquals("2008-10-31T00:00:00.000Z", xpath.evaluate("//wcs:Extension/wcseo:DatasetSeriesSummary[wcseo:DatasetSeriesId='sf__watertemp_dss']/gml:TimePeriod/gml:beginPosition", dom));

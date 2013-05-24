@@ -6,16 +6,21 @@ package org.geoserver.wcs2_0.eo.response;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import net.opengis.wcs20.DescribeEOCoverageSetType;
+import net.opengis.wcs20.DimensionTrimType;
+import net.opengis.wcs20.Section;
 
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.ows.util.ResponseUtils;
+import org.geoserver.platform.OWS20Exception.OWSExceptionCode;
 import org.geoserver.wcs.WCSInfo;
 import org.geoserver.wcs2_0.GetCoverage;
 import org.geoserver.wcs2_0.eo.EOCoverageResourceCodec;
@@ -25,6 +30,7 @@ import org.geoserver.wcs2_0.response.WCS20DescribeCoverageTransformer;
 import org.geoserver.wcs2_0.response.WCS20DescribeCoverageTransformer.WCS20DescribeCoverageTranslator;
 import org.geoserver.wcs2_0.response.WCSDimensionsHelper;
 import org.geoserver.wcs2_0.util.EnvelopeAxesLabelsMapper;
+import org.geotools.coverage.grid.io.DimensionDescriptor;
 import org.geotools.coverage.grid.io.GranuleSource;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
@@ -33,19 +39,34 @@ import org.geotools.data.Query;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.data.simple.SimpleFeatureIterator;
 import org.geotools.data.store.MaxFeaturesFeatureCollection;
+import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.geometry.GeneralEnvelope;
+import org.geotools.geometry.jts.JTS;
+import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
 import org.geotools.referencing.CRS.AxisOrder;
+import org.geotools.referencing.crs.DefaultGeographicCRS;
+import org.geotools.util.DateRange;
+import org.geotools.util.NumberRange;
 import org.geotools.util.logging.Logging;
+import org.geotools.xml.impl.DatatypeConverterImpl;
 import org.geotools.xml.transform.TransformerBase;
 import org.geotools.xml.transform.Translator;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
+import org.opengis.feature.type.GeometryDescriptor;
+import org.opengis.filter.Filter;
+import org.opengis.filter.FilterFactory2;
+import org.opengis.filter.expression.Literal;
+import org.opengis.filter.expression.PropertyName;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.xml.sax.Attributes;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.helpers.AttributesImpl;
+
+import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.geom.Polygon;
 
 /**
  * Encodes a DescribeEOCoverageSet response
@@ -55,7 +76,7 @@ import org.xml.sax.helpers.AttributesImpl;
 public class DescribeEOCoverageSetTransformer extends TransformerBase {
 
     static Logger LOGGER = Logging.getLogger(WCS20DescribeEOCoverageSetTranslator.class);
-    
+
     EOCoverageResourceCodec codec;
 
     WCS20DescribeCoverageTransformer dcTransformer;
@@ -98,7 +119,7 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
             DescribeEOCoverageSetType dcs = (DescribeEOCoverageSetType) o;
 
             List<CoverageInfo> coverages = getCoverages(dcs);
-            List<CoverageGranules> coverageGranules = getCoverageGranules(coverages);
+            List<CoverageGranules> coverageGranules = getCoverageGranules(dcs, coverages);
             int granuleCount = getGranuleCount(coverageGranules);
             Integer maxCoverages = getMaxCoverages(dcs);
             int returned = granuleCount < maxCoverages ? granuleCount : maxCoverages;
@@ -123,25 +144,37 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
 
             start("wcseo:EOCoverageSetDescription", atts);
 
-            
-            List<CoverageGranules> reducedGranules = applyMaxCoverages(coverageGranules, maxCoverages);
-            
-            handleCoverageDescriptions(reducedGranules);
-            handleDatasetSeriesDescriptions(coverages);
+            if(!coverageGranules.isEmpty()) {
+                List<CoverageGranules> reducedGranules = applyMaxCoverages(coverageGranules,
+                        maxCoverages);
+
+                boolean allSections = dcs.getSections() == null
+                        || dcs.getSections().getSection() == null
+                        || dcs.getSections().getSection().contains(Section.ALL);
+                if (allSections
+                        || dcs.getSections().getSection().contains(Section.COVERAGEDESCRIPTIONS)) {
+                    handleCoverageDescriptions(reducedGranules);
+                }
+                if (allSections
+                        || dcs.getSections().getSection().contains(Section.DATASETSERIESDESCRIPTIONS)) {
+                    handleDatasetSeriesDescriptions(coverageGranules);
+                } 
+            }
 
             end("wcseo:EOCoverageSetDescription");
         }
 
         /**
-         * Returns the max number of coverages to return, if any (null otherwise) 
+         * Returns the max number of coverages to return, if any (null otherwise)
+         * 
          * @param dcs
          * @return
          */
         private Integer getMaxCoverages(DescribeEOCoverageSetType dcs) {
-            if(dcs.getCount() > 0) {
+            if (dcs.getCount() > 0) {
                 return dcs.getCount();
-            } 
-            
+            }
+
             // fall back on the the default value, it's ok if it's null
             return wcs.getMetadata().get(WCSEOMetadata.COUNT_DEFAULT.key, Integer.class);
         }
@@ -151,22 +184,25 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
             List<CoverageGranules> result = new ArrayList<DescribeEOCoverageSetTransformer.CoverageGranules>();
             for (CoverageGranules cg : coverageGranules) {
                 int size = cg.granules.size();
-                if(size > maxCoverages) {
-                    cg.granules = DataUtilities.simple(new MaxFeaturesFeatureCollection<SimpleFeatureType, SimpleFeature>(cg.granules, maxCoverages));
+                if (size > maxCoverages) {
+                    cg.granules = DataUtilities
+                            .simple(new MaxFeaturesFeatureCollection<SimpleFeatureType, SimpleFeature>(
+                                    cg.granules, maxCoverages));
                 }
                 result.add(cg);
                 maxCoverages -= size;
-                if(maxCoverages <= 0) {
+                if (maxCoverages <= 0) {
                     break;
                 }
             }
-            
+
             return result;
         }
 
-        private void handleDatasetSeriesDescriptions(List<CoverageInfo> coverages) {
+        private void handleDatasetSeriesDescriptions(List<CoverageGranules> coverages) {
             start("wcseo:DatasetSeriesDescriptions");
-            for (CoverageInfo ci : coverages) {
+            for (CoverageGranules gc : coverages) {
+                CoverageInfo ci = gc.coverage;
                 String datasetId = codec.getDatasetName(ci);
                 start("wcseo:DatasetSeriesDescription", atts("gml:id", datasetId));
 
@@ -176,10 +212,10 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
 
                     // encode the bbox
                     encodeDatasetBounds(ci, reader);
-                    
+
                     // the dataset series id
                     element("wcseo:DatasetSeriesId", datasetId);
-                    
+
                     // encode the time
                     DimensionInfo time = ci.getMetadata().get(ResourceInfo.TIME, DimensionInfo.class);
                     WCSDimensionsHelper timeHelper = new WCSDimensionsHelper(time, reader, datasetId);
@@ -206,12 +242,10 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
             try {
                 EPSGCode = CRS.lookupEpsgCode(crs, false);
             } catch (FactoryException e) {
-                throw new IllegalStateException("Unable to lookup epsg code for this CRS:"
-                        + crs, e);
+                throw new IllegalStateException("Unable to lookup epsg code for this CRS:" + crs, e);
             }
             if (EPSGCode == null) {
-                throw new IllegalStateException("Unable to lookup epsg code for this CRS:"
-                        + crs);
+                throw new IllegalStateException("Unable to lookup epsg code for this CRS:" + crs);
             }
             final String srsName = GetCoverage.SRS_STARTER + EPSGCode;
             // handle axes swap for geographic crs
@@ -230,20 +264,20 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
             for (CoverageGranules cg : coverageGranules) {
                 SimpleFeatureIterator features = cg.granules.features();
                 try {
-                    while(features.hasNext()) {
+                    while (features.hasNext()) {
                         SimpleFeature f = features.next();
                         String granuleId = codec.getGranuleId(cg.coverage, f.getID());
-                        dcTranslator.handleCoverageDescription(granuleId, new GranuleCoverageInfo(cg.coverage, f));
+                        dcTranslator.handleCoverageDescription(granuleId, new GranuleCoverageInfo(
+                                cg.coverage, f, cg.timeDimensionDescriptor));
                     }
                 } finally {
-                    if(features != null) {
+                    if (features != null) {
                         features.close();
                     }
                 }
             }
             end("wcs:CoverageDescriptions");
         }
-
 
         private int getGranuleCount(List<CoverageGranules> granules) {
             int sum = 0;
@@ -268,26 +302,33 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
             return results;
         }
 
-        private List<CoverageGranules> getCoverageGranules(List<CoverageInfo> coverages) {
+        private List<CoverageGranules> getCoverageGranules(DescribeEOCoverageSetType dcs,
+                List<CoverageInfo> coverages) {
             List<CoverageGranules> results = new ArrayList<CoverageGranules>();
             for (CoverageInfo ci : coverages) {
                 GranuleSource source = null;
                 try {
                     StructuredGridCoverage2DReader reader = (StructuredGridCoverage2DReader) ci
                             .getGridCoverageReader(null, null);
-                    String name = ci.getNativeCoverageName() != null ? ci.getNativeCoverageName() : reader.getGridCoverageNames()[0];
+                    String name = ci.getNativeCoverageName() != null ? ci.getNativeCoverageName()
+                            : reader.getGridCoverageNames()[0];
                     source = reader.getGranules(name, true);
-                    // TODO : filter based on dimension trimming
-                    SimpleFeatureCollection collection = source.getGranules(Query.ALL);
 
-                    CoverageGranules granules = new CoverageGranules(ci, reader, collection);
-                    results.add(granules);
+                    Query q = buildQueryFromDimensionTrims(dcs, reader, name);
+                    SimpleFeatureCollection collection = source.getGranules(q);
+
+                    // only report in output coverages that have at least one matched granule
+                    if(!collection.isEmpty()) {
+                        DimensionDescriptor time = getTimeDescriptor(reader, name);
+                        CoverageGranules granules = new CoverageGranules(ci, name, reader, collection, time);
+                        results.add(granules);
+                    }
                 } catch (IOException e) {
                     throw new WCS20Exception("Failed to load the coverage granules for covearge "
                             + ci.prefixedName(), e);
                 } finally {
                     try {
-                        if(source != null) {
+                        if (source != null) {
                             source.dispose();
                         }
                     } catch (IOException e) {
@@ -297,6 +338,185 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
             }
 
             return results;
+        }
+        
+        public DimensionDescriptor getTimeDescriptor(StructuredGridCoverage2DReader reader, String coverageName) {
+            try {
+                List<DimensionDescriptor> descriptors = reader.getDimensionDescriptors(coverageName);
+                for (DimensionDescriptor dd : descriptors) {
+                    if (dd.getName().equalsIgnoreCase("TIME")) {
+                        return dd;
+                    }
+                }
+
+                return null;
+            } catch(IOException e) {
+                throw new WCS20Exception("Failed to locate the reader's time dimension descriptor", e);
+            }
+        }
+
+        private Query buildQueryFromDimensionTrims(DescribeEOCoverageSetType dcs,
+                StructuredGridCoverage2DReader reader, String coverageName) throws IOException {
+            // no selection, get all
+            if (dcs.getDimensionTrim() == null || dcs.getDimensionTrim().size() == 0) {
+                return Query.ALL;
+            }
+
+            // find out what the selection is about
+            DateRange timeRange = null;
+            NumberRange<Double> lonRange = null;
+            NumberRange<Double> latRange = null;
+            for (DimensionTrimType trim : dcs.getDimensionTrim()) {
+                String name = trim.getDimension();
+                if ("Long".equals(name)) {
+                    if (lonRange != null) {
+                        throw new WCS20Exception("Long trim specified more than once",
+                                OWSExceptionCode.InvalidParameterValue, "subset");
+                    }
+                    lonRange = parseNumberRange(trim);
+                } else if ("Lat".equals(name)) {
+                    if (latRange != null) {
+                        throw new WCS20Exception("Lat trim specified more than once",
+                                OWSExceptionCode.InvalidParameterValue, "subset");
+                    }
+                    latRange = parseNumberRange(trim);
+                } else if ("phenomenonTime".equals(name)) {
+                    if (timeRange != null) {
+                        throw new WCS20Exception("phenomenonTime trim specified more than once",
+                                OWSExceptionCode.InvalidParameterValue, "subset");
+                    }
+                    timeRange = parseDateRange(trim);
+                } else {
+                    throw new WCS20Exception("Invalid dimension name " + name
+                            + ", the only valid values "
+                            + "by WCS EO spec are Long, Lat and phenomenonTime",
+                            OWSExceptionCode.InvalidParameterValue, "subset");
+                }
+            }
+
+            // check the desired containment
+            boolean overlaps;
+            String containment = dcs.getContainmentType();
+            if (containment == null || "overlaps".equals(containment)) {
+                overlaps = true;
+            } else if ("contains".equals(containment)) {
+                overlaps = false;
+            } else {
+                throw new WCS20Exception("Invalid containment value " + containment
+                        + ", the only valid values by WCS EO spec are contains and overlaps",
+                        OWSExceptionCode.InvalidParameterValue, "containment");
+            }
+
+            // spatial subset
+            FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2();
+            Filter filter = null;
+            if (lonRange != null || latRange != null) {
+                try {
+                    // we are going to intersect the trims with the original envelope
+                    // since the trims can only be expressed in wgs84 we need to reproject back and forth
+                    ReferencedEnvelope original = new ReferencedEnvelope(reader.getOriginalEnvelope())
+                            .transform(DefaultGeographicCRS.WGS84, true);
+                    if (lonRange != null) {
+                        ReferencedEnvelope lonTrim = new ReferencedEnvelope(lonRange.getMinimum(),
+                                lonRange.getMaximum(), -90, 90, DefaultGeographicCRS.WGS84);
+                        original = new ReferencedEnvelope(original.intersection(lonTrim), DefaultGeographicCRS.WGS84);
+                    }
+                    if (latRange != null) {
+                        ReferencedEnvelope latTrim = new ReferencedEnvelope(-180, 180,
+                                latRange.getMinimum(), latRange.getMaximum(),
+                                DefaultGeographicCRS.WGS84);
+                        original = new ReferencedEnvelope(original.intersection(latTrim), DefaultGeographicCRS.WGS84);
+                    }
+                    if (original.isEmpty()) {
+                        filter = Filter.EXCLUDE;
+                    } else {
+                        Polygon llPolygon = JTS.toGeometry(original);
+                        GeometryDescriptor geom = reader.getGranules(coverageName, true).getSchema().getGeometryDescriptor();
+                        PropertyName geometryProperty = ff.property(geom.getLocalName());
+                        Geometry nativeCRSPolygon = JTS.transform(llPolygon, CRS.findMathTransform(DefaultGeographicCRS.WGS84, reader.getCoordinateReferenceSystem()));
+                        Literal polygonLiteral = ff.literal(nativeCRSPolygon);
+                        if(overlaps) {
+                            filter = ff.intersects(geometryProperty, polygonLiteral);
+                        } else {
+                            filter = ff.within(geometryProperty, polygonLiteral);
+                        }
+                    }
+                } catch(Exception e) {
+                    throw new WCS20Exception("Failed to translate the spatial trim into a native filter", e);
+                }
+            }
+
+            // temporal subset
+            if (timeRange != null && filter != Filter.EXCLUDE) {
+                DimensionDescriptor timeDescriptor = getTimeDescriptor(reader, coverageName);
+                String start = timeDescriptor.getStartAttribute();
+                String end = timeDescriptor.getEndAttribute();
+                
+                Filter timeFilter;
+                if(end == null) {
+                    // single value time
+                    timeFilter = ff.between(ff.property(start), ff.literal(timeRange.getMinValue()), ff.literal(timeRange.getMaxValue()));
+                } else {
+                    // range value, we need to account for containment then
+                    if(overlaps) {
+                        Filter f1 = ff.lessOrEqual(ff.property(start), ff.literal(timeRange.getMaxValue()));
+                        Filter f2 = ff.greaterOrEqual(ff.property(end), ff.literal(timeRange.getMinValue()));
+                        timeFilter = ff.and(Arrays.asList(f1, f2));
+                    } else {
+                        Filter f1 = ff.greaterOrEqual(ff.property(start), ff.literal(timeRange.getMinValue()));
+                        Filter f2 = ff.lessOrEqual(ff.property(end), ff.literal(timeRange.getMaxValue()));
+                        timeFilter = ff.and(Arrays.asList(f1, f2));
+                    }
+                }
+                
+                if(filter == null) {
+                    filter = timeFilter;
+                } else {
+                    filter = ff.and(filter, timeFilter);
+                }
+            }
+
+            return new Query(null, filter);
+        }
+
+        private DateRange parseDateRange(DimensionTrimType trim) {
+            DatatypeConverterImpl xmlTimeConverter = DatatypeConverterImpl.getInstance();
+            try {
+                final Date low = xmlTimeConverter.parseDateTime(trim.getTrimLow()).getTime();
+                final Date high = xmlTimeConverter.parseDateTime(trim.getTrimHigh()).getTime();
+
+                // low > high???
+                if (low.compareTo(high) > 0) {
+                    throw new WCS20Exception("Low greater than High in trim for dimension: "
+                            + trim.getDimension(),
+                            WCS20Exception.WCS20ExceptionCode.InvalidSubsetting, "dimensionTrim");
+                }
+
+                return new DateRange(low, high);
+            } catch (IllegalArgumentException e) {
+                throw new WCS20Exception("Invalid date value",
+                        OWSExceptionCode.InvalidParameterValue, "dimensionTrim", e);
+            }
+
+        }
+
+        private NumberRange<Double> parseNumberRange(DimensionTrimType trim) {
+            try {
+                double low = Double.parseDouble(trim.getTrimLow());
+                double high = Double.parseDouble(trim.getTrimHigh());
+
+                // low > high???
+                if (low > high) {
+                    throw new WCS20Exception("Low greater than High in trim for dimension: "
+                            + trim.getDimension(),
+                            WCS20Exception.WCS20ExceptionCode.InvalidSubsetting, "dimensionTrim");
+                }
+
+                return new NumberRange<Double>(Double.class, low, high);
+            } catch (NumberFormatException e) {
+                throw new WCS20Exception("Invalid numeric value",
+                        OWSExceptionCode.InvalidParameterValue, "dimensionTrim", e);
+            }
         }
 
         Attributes atts(String... atts) {
@@ -315,11 +535,17 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
 
         SimpleFeatureCollection granules;
 
-        public CoverageGranules(CoverageInfo coverage, StructuredGridCoverage2DReader reader,
-                SimpleFeatureCollection granules) {
+        private String name;
+
+        private DimensionDescriptor timeDimensionDescriptor;
+
+        public CoverageGranules(CoverageInfo coverage, String name, StructuredGridCoverage2DReader reader,
+                SimpleFeatureCollection granules, DimensionDescriptor timeDimensionDescriptor) {
             this.coverage = coverage;
+            this.name = name;
             this.reader = reader;
             this.granules = granules;
+            this.timeDimensionDescriptor = timeDimensionDescriptor;
         }
 
     }

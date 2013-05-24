@@ -21,6 +21,7 @@ import org.geotools.coverage.grid.io.HarvestedFile;
 import org.geotools.coverage.grid.io.OverviewPolicy;
 import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
 import org.geotools.factory.Hints;
+import org.geotools.feature.FeatureIndex;
 import org.geotools.geometry.GeneralEnvelope;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.opengis.coverage.grid.Format;
@@ -47,35 +48,35 @@ public class SingleGranuleGridCoverageReader implements StructuredGridCoverage2D
 
     private SimpleFeature feature;
 
-    String featureTime;
+    boolean interval;
+    String featureMinTime;
+    String featureMaxTime;
 
     GeneralEnvelope granuleEnvelope;
 
     ISO8601Formatter formatter = new ISO8601Formatter();
 
     public SingleGranuleGridCoverageReader(StructuredGridCoverage2DReader reader,
-            SimpleFeature feature) {
+            SimpleFeature feature, DimensionDescriptor timeDescriptor) {
         this.reader = reader;
         this.feature = feature;
-        this.featureTime = formatter.format(lookupFeatureTime());
+        this.featureMinTime = formatter.format(feature.getAttribute(timeDescriptor.getStartAttribute()));
+        interval = timeDescriptor.getEndAttribute() != null;
+        if(interval) {
+            this.featureMaxTime = formatter.format(feature.getAttribute(timeDescriptor.getEndAttribute()));
+        } else {
+            this.featureMaxTime = featureMinTime;
+        }
         Geometry featureGeometry = lookupFeatureGeometry();
         ReferencedEnvelope re = new ReferencedEnvelope(featureGeometry.getEnvelopeInternal(),
                 reader.getCoordinateReferenceSystem());
         this.granuleEnvelope = new GeneralEnvelope(re);
     }
+    
+    
 
     private Geometry lookupFeatureGeometry() {
         return (Geometry) feature.getDefaultGeometry();
-    }
-
-    private Date lookupFeatureTime() {
-        for (Object value : feature.getAttributes()) {
-            if (value instanceof Date) {
-                return (Date) value;
-            }
-        }
-
-        throw new IllegalStateException("The feature does not have a date!");
     }
 
     public Format getFormat() {
@@ -114,10 +115,18 @@ public class SingleGranuleGridCoverageReader implements StructuredGridCoverage2D
     }
 
     public String getMetadataValue(String name) throws IOException {
-        if (GridCoverage2DReader.TIME_DOMAIN.equals(name)
-                || GridCoverage2DReader.TIME_DOMAIN_MAXIMUM.equals(name)
-                || GridCoverage2DReader.TIME_DOMAIN_MINIMUM.equals(name)) {
-            return featureTime;
+        if (GridCoverage2DReader.TIME_DOMAIN_MINIMUM.equals(name)) {
+            return featureMinTime;
+        }
+        if (GridCoverage2DReader.TIME_DOMAIN_MAXIMUM.equals(name)) {
+            return featureMaxTime;
+        }
+        if (GridCoverage2DReader.TIME_DOMAIN.equals(name)) {
+            if(interval) {
+                return featureMinTime + "/" + featureMaxTime;
+            } else {
+                return featureMinTime;
+            }
         }
         return reader.getMetadataValue(name);
     }

@@ -43,6 +43,11 @@
     <property name="service" value="WCS" />
     <property name="request" value="DescribeEOCoverageSet" />
   </bean>
+  <bean id="wcs20describeEOCoverageSetCountKvpParser" class="org.geoserver.ows.kvp.IntegerKvpParser">
+    <constructor-arg index="0" value="count" />
+    <property name="service" value="WCS" />
+    <property name="request" value="DescribeEOCoverageSet" />
+  </bean>
   <bean id="wcs20DescribeEOCoverageSetKvpReader"
     class="org.geoserver.wcs2_0.eo.kvp.WCS20DescribeEOCoverageSetRequestReader" />
 

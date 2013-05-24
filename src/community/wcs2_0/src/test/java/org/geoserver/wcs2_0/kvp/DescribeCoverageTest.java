@@ -134,7 +134,7 @@ public class DescribeCoverageTest extends WCSTestSupport {
     public void testDescribeTimeContinousInterval() throws Exception {
         setupRasterDimension(getLayerId(WATTEMP), ResourceInfo.TIME, DimensionPresentation.CONTINUOUS_INTERVAL, null);
         Document dom = getAsDOM(DESCRIBE_URL + "&coverageId=sf__watertemp");
-        print(dom);
+//        print(dom);
         
         checkWaterTempTimeEnvelope(dom);
         
@@ -150,7 +150,7 @@ public class DescribeCoverageTest extends WCSTestSupport {
     public void testDescribeTimeDiscreteInterval() throws Exception {
         setupRasterDimension(getLayerId(WATTEMP), ResourceInfo.TIME, DimensionPresentation.DISCRETE_INTERVAL, 1000 * 60 * 60 * 24d);
         Document dom = getAsDOM(DESCRIBE_URL + "&coverageId=sf__watertemp");
-        print(dom);
+//        print(dom);
         
         checkWaterTempTimeEnvelope(dom);
         
@@ -190,7 +190,7 @@ public class DescribeCoverageTest extends WCSTestSupport {
     public void testDescribeElevationDiscreteInterval() throws Exception {
         setupRasterDimension(getLayerId(TIMERANGES), ResourceInfo.ELEVATION, DimensionPresentation.DISCRETE_INTERVAL, 50d, "m");
         Document dom = getAsDOM(DESCRIBE_URL + "&coverageId=sf__timeranges");
-        print(dom);
+//        print(dom);
         
         checkElevationRangesEnvelope(dom);
         
@@ -206,7 +206,7 @@ public class DescribeCoverageTest extends WCSTestSupport {
     public void testDescribeElevationContinuousInterval() throws Exception {
         setupRasterDimension(getLayerId(TIMERANGES), ResourceInfo.ELEVATION, DimensionPresentation.CONTINUOUS_INTERVAL, null);
         Document dom = getAsDOM(DESCRIBE_URL + "&coverageId=sf__timeranges");
-        print(dom);
+//        print(dom);
         
         checkElevationRangesEnvelope(dom);
         
@@ -220,7 +220,7 @@ public class DescribeCoverageTest extends WCSTestSupport {
     public void testDescribeElevationValuesList() throws Exception {
         setupRasterDimension(getLayerId(WATTEMP), ResourceInfo.ELEVATION, DimensionPresentation.LIST, null);
         Document dom = getAsDOM(DESCRIBE_URL + "&coverageId=sf__watertemp");
-        print(dom);
+//        print(dom);
         
         checkWaterTempElevationEnvelope(dom);
         
@@ -234,7 +234,7 @@ public class DescribeCoverageTest extends WCSTestSupport {
     public void testDescribeElevationRangeList() throws Exception {
         setupRasterDimension(getLayerId(TIMERANGES), ResourceInfo.ELEVATION, DimensionPresentation.LIST, null);
         Document dom = getAsDOM(DESCRIBE_URL + "&coverageId=sf__timeranges");
-        print(dom);
+//        print(dom);
         
         checkElevationRangesEnvelope(dom);
         
@@ -251,7 +251,7 @@ public class DescribeCoverageTest extends WCSTestSupport {
         setupRasterDimension(getLayerId(WATTEMP), ResourceInfo.TIME, DimensionPresentation.LIST, null);
         setupRasterDimension(getLayerId(WATTEMP), ResourceInfo.ELEVATION, DimensionPresentation.LIST, null);
         Document dom = getAsDOM(DESCRIBE_URL + "&coverageId=sf__watertemp");
-        print(dom);
+//        print(dom);
         
         checkWaterTempTimeElevationEnvelope(dom);
         
@@ -275,7 +275,7 @@ public class DescribeCoverageTest extends WCSTestSupport {
         setupRasterDimension(getLayerId(MULTIDIM), ResourceInfo.CUSTOM_DIMENSION_PREFIX + "WAVELENGTH", DimensionPresentation.LIST, null);
         setupRasterDimension(getLayerId(MULTIDIM), ResourceInfo.CUSTOM_DIMENSION_PREFIX + "DATE", DimensionPresentation.LIST, null);
         Document dom = getAsDOM(DESCRIBE_URL + "&coverageId=sf__multidim");
-        print(dom);
+//        print(dom);
         
         checkTimeElevationRangesEnvelope(dom);
         
@@ -316,7 +316,7 @@ public class DescribeCoverageTest extends WCSTestSupport {
         assertXpathEvaluatesTo("25.0", "//gmlcov:metadata/gmlcov:Extension/wcsgs:DimensionDomain[2]/wcsgs:Range[2]/wcsgs:start", dom);
         assertXpathEvaluatesTo("80.0", "//gmlcov:metadata/gmlcov:Extension/wcsgs:DimensionDomain[2]/wcsgs:Range[2]/wcsgs:end", dom);
     }
-    
+
     private void checkWaterTempTimeEnvelope(Document dom) throws XpathException {
         // check the envelope with time
         assertXpathEvaluatesTo("1", "count(//gml:boundedBy/gml:EnvelopeWithTimePeriod)", dom);
@@ -325,7 +325,7 @@ public class DescribeCoverageTest extends WCSTestSupport {
         assertXpathEvaluatesTo("2008-10-31T00:00:00.000Z", "//gml:boundedBy/gml:EnvelopeWithTimePeriod/gml:beginPosition", dom);
         assertXpathEvaluatesTo("2008-11-01T00:00:00.000Z", "//gml:boundedBy/gml:EnvelopeWithTimePeriod/gml:endPosition", dom);
     }
-    
+
     private void checkWaterTempTimeElevationEnvelope(Document dom) throws XpathException {
         // check the envelope with time
         assertXpathEvaluatesTo("1", "count(//gml:boundedBy/gml:EnvelopeWithTimePeriod)", dom);
@@ -337,7 +337,7 @@ public class DescribeCoverageTest extends WCSTestSupport {
         assertXpathEvaluatesTo("2008-10-31T00:00:00.000Z", "//gml:boundedBy/gml:EnvelopeWithTimePeriod/gml:beginPosition", dom);
         assertXpathEvaluatesTo("2008-11-01T00:00:00.000Z", "//gml:boundedBy/gml:EnvelopeWithTimePeriod/gml:endPosition", dom);
     }
-    
+
     private void checkWaterTempElevationEnvelope(Document dom) throws XpathException {
         // check the envelope with time
         assertXpathEvaluatesTo("1", "count(//gml:boundedBy/gml:EnvelopeWithTimePeriod)", dom);
@@ -357,7 +357,7 @@ public class DescribeCoverageTest extends WCSTestSupport {
         assertXpathEvaluatesTo("40.562080748421806 0.23722068851276978 20.0", "//gml:boundedBy/gml:EnvelopeWithTimePeriod/gml:lowerCorner", dom);
         assertXpathEvaluatesTo("44.55808294568743 14.592757149389236 150.0", "//gml:boundedBy/gml:EnvelopeWithTimePeriod/gml:upperCorner", dom);
     }
-    
+
     private void checkTimeElevationRangesEnvelope(Document dom) throws XpathException {
         // check the envelope with time
         assertXpathEvaluatesTo("1", "count(//gml:boundedBy/gml:EnvelopeWithTimePeriod)", dom);
@@ -369,14 +369,4 @@ public class DescribeCoverageTest extends WCSTestSupport {
         assertXpathEvaluatesTo("2008-10-31T00:00:00.000Z", "//gml:boundedBy/gml:EnvelopeWithTimePeriod/gml:beginPosition", dom);
         assertXpathEvaluatesTo("2008-11-07T00:00:00.000Z", "//gml:boundedBy/gml:EnvelopeWithTimePeriod/gml:endPosition", dom);
     }
-    
-//    private void checkCustomWaterTempEnvelope(Document dom) throws XpathException {
-//        // check the envelope with time
-//        assertXpathEvaluatesTo("1", "count(//gml:boundedBy/gml:EnvelopeWithTimePeriod)", dom);
-//        assertXpathEvaluatesTo("lat lon time", "//gml:boundedBy/gml:EnvelopeWithTimePeriod/@axisLabels", dom);
-//        assertXpathEvaluatesTo("Deg Deg s", "//gml:boundedBy/gml:EnvelopeWithTimePeriod/@uomLabels", dom);
-//        assertXpathEvaluatesTo("2", "//gml:boundedBy/gml:EnvelopeWithTimePeriod/@srsDimension", dom);
-//        assertXpathEvaluatesTo("2008-10-31T00:00:00.000Z", "//gml:boundedBy/gml:EnvelopeWithTimePeriod/gml:beginPosition", dom);
-//        assertXpathEvaluatesTo("2008-11-01T00:00:00.000Z", "//gml:boundedBy/gml:EnvelopeWithTimePeriod/gml:endPosition", dom);
-//    }
 }
