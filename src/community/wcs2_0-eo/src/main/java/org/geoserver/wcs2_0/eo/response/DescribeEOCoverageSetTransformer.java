@@ -319,7 +319,7 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
 
                     // only report in output coverages that have at least one matched granule
                     if(!collection.isEmpty()) {
-                        DimensionDescriptor time = getTimeDescriptor(reader, name);
+                        DimensionDescriptor time = WCSDimensionsHelper.getDimensionDescriptor(reader, name, "TIME");
                         CoverageGranules granules = new CoverageGranules(ci, name, reader, collection, time);
                         results.add(granules);
                     }
@@ -336,23 +336,7 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
                     }
                 }
             }
-
             return results;
-        }
-        
-        public DimensionDescriptor getTimeDescriptor(StructuredGridCoverage2DReader reader, String coverageName) {
-            try {
-                List<DimensionDescriptor> descriptors = reader.getDimensionDescriptors(coverageName);
-                for (DimensionDescriptor dd : descriptors) {
-                    if (dd.getName().equalsIgnoreCase("TIME")) {
-                        return dd;
-                    }
-                }
-
-                return null;
-            } catch(IOException e) {
-                throw new WCS20Exception("Failed to locate the reader's time dimension descriptor", e);
-            }
         }
 
         private Query buildQueryFromDimensionTrims(DescribeEOCoverageSetType dcs,
@@ -448,7 +432,7 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
 
             // temporal subset
             if (timeRange != null && filter != Filter.EXCLUDE) {
-                DimensionDescriptor timeDescriptor = getTimeDescriptor(reader, coverageName);
+                DimensionDescriptor timeDescriptor = WCSDimensionsHelper.getDimensionDescriptor(reader, coverageName, "TIME");
                 String start = timeDescriptor.getStartAttribute();
                 String end = timeDescriptor.getEndAttribute();
                 

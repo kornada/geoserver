@@ -4,6 +4,7 @@
  */
 package org.geoserver.wcs2_0.response;
 
+import java.awt.geom.AffineTransform;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -21,18 +22,30 @@ import net.opengis.wcs20.DimensionSubsetType;
 import net.opengis.wcs20.DimensionTrimType;
 import net.opengis.wcs20.GetCoverageType;
 
+import org.eclipse.emf.common.util.EList;
+import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.util.ReaderDimensionsAccessor;
+import org.geoserver.wcs2_0.GridCoverageRequest;
 import org.geoserver.wcs2_0.exception.WCS20Exception;
+import org.geoserver.wcs2_0.util.EnvelopeAxesLabelsMapper;
+import org.geoserver.wcs2_0.util.RequestUtils;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
+import org.geotools.geometry.GeneralEnvelope;
+import org.geotools.referencing.CRS;
 import org.geotools.util.DateRange;
 import org.geotools.util.NumberRange;
 import org.geotools.util.logging.Logging;
 import org.geotools.xml.impl.DatatypeConverterImpl;
+import org.opengis.referencing.FactoryException;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.opengis.referencing.datum.PixelInCell;
+import org.opengis.referencing.operation.MathTransform;
+import org.opengis.referencing.operation.TransformException;
 
 /**
- * Provides support to deal with dimensions slicing, trimming and values conversions for additional dimensions
+ * Provides support to deal with dimensions slicing, trimming, values conversions and default values computations
  * 
  * TODO: Port timeSubset and elevationSubset code here too
  * @author Daniele Romagnoli - GeoSolutions
@@ -57,6 +70,14 @@ public class WCSDimensionsSubsetHelper {
 
     private DimensionInfo elevationDimension;
 
+    private CoordinateReferenceSystem subsettingCRS;
+
+    private GridCoverage2DReader reader;
+
+    private EnvelopeAxesLabelsMapper envelopeDimensionsMapper;
+
+    private CoverageInfo ci;
+
     static {
         TIME_NAMES.add("t");
         TIME_NAMES.add("time");
@@ -65,20 +86,22 @@ public class WCSDimensionsSubsetHelper {
         ELEVATION_NAMES.add("elevation"); 
     }
 
-    public WCSDimensionsSubsetHelper(GridCoverage2DReader reader, GetCoverageType request,
-            Map<String, DimensionInfo> dimensions) throws IOException {
+    public WCSDimensionsSubsetHelper(GridCoverage2DReader reader, GetCoverageType request, CoverageInfo ci, 
+            CoordinateReferenceSystem subsettingCRS, EnvelopeAxesLabelsMapper envelopeDimensionsMapper) throws IOException {
         this.request = request;
-        this.dimensions = dimensions;
+        this.ci = ci;
+
+        // Note that dimensions will be returned if existing and enabled too
+        this.dimensions = WCSDimensionsHelper.getDimensionsFromMetadata(ci.getMetadata());
+        this.subsettingCRS = subsettingCRS;
+        this.reader = reader;
+        this.envelopeDimensionsMapper = envelopeDimensionsMapper;
         timeDimension = dimensions.get(ResourceInfo.TIME);
         elevationDimension = dimensions.get(ResourceInfo.ELEVATION);
-        
-        if (timeDimension != null || elevationDimension != null) {
-            // Create accessor once and provide it to any method which uses accessor
-            // Accessor creation requires metadata initialization. Creating it once, 
-            // should be faster.
+
+        if (timeDimension != null || elevationDimension != null || !dimensions.isEmpty()) {
             accessor = new ReaderDimensionsAccessor(reader);
         }
-        
     }
 
     /**
@@ -128,6 +151,218 @@ public class WCSDimensionsSubsetHelper {
     }
     
     /**
+     * This method is responsible for extracting the subsettingEvelope from the 
+     * incoming request.
+     * 
+     * @param reader
+     * @param request
+     * @param subsettingCRS
+     * @return
+     */
+    public GeneralEnvelope extractSubsettingEnvelope() {
+
+        //default envelope in subsettingCRS
+        final CoordinateReferenceSystem sourceCRS=reader.getCoordinateReferenceSystem();
+        GeneralEnvelope sourceEnvelopeInSubsettingCRS=new GeneralEnvelope(reader.getOriginalEnvelope());
+        sourceEnvelopeInSubsettingCRS.setCoordinateReferenceSystem(sourceCRS);
+        if(!(subsettingCRS==null||CRS.equalsIgnoreMetadata(subsettingCRS,sourceCRS))){
+            // reproject source envelope to subsetting crs for initialization
+            try {
+                sourceEnvelopeInSubsettingCRS= CRS.transform(
+                        CRS.findMathTransform(reader.getCoordinateReferenceSystem(), subsettingCRS), 
+                        reader.getOriginalEnvelope());
+                sourceEnvelopeInSubsettingCRS.setCoordinateReferenceSystem(subsettingCRS);
+            } catch (Exception e) {
+                final WCS20Exception exception= new WCS20Exception(
+                        "Unable to initialize subsetting envelope",
+                        WCS20Exception.WCS20ExceptionCode.SubsettingCrsNotSupported,
+                        subsettingCRS.toWKT()); // TODO extract code
+                exception.initCause(e);
+                throw exception;
+            } 
+        }
+
+        // check if we have to subset, if not let's send back the basic coverage
+        final EList<DimensionSubsetType> requestedDimensions = request.getDimensionSubset();
+        if(requestedDimensions==null||requestedDimensions.size()<=0){
+            return sourceEnvelopeInSubsettingCRS;
+        }
+
+        int maxDimensions = 2 + dimensions.size();
+        if(requestedDimensions.size() > maxDimensions){
+            throw new WCS20Exception(
+                    "Invalid number of dimensions", 
+                    WCS20Exception.WCS20ExceptionCode.InvalidSubsetting,Integer.toString(requestedDimensions.size()));
+        }
+
+        // put aside the dimensions that we have for double checking
+        final List<String> axesNames = envelopeDimensionsMapper.getAxesNames(sourceEnvelopeInSubsettingCRS, true);
+        final List<String> foundDimensions= new ArrayList<String>();
+        
+        // === parse dimensions 
+        // the subsetting envelope is initialized with the source envelope in subsetting CRS
+        GeneralEnvelope subsettingEnvelope = new GeneralEnvelope(sourceEnvelopeInSubsettingCRS);  
+        subsettingEnvelope.setCoordinateReferenceSystem(subsettingCRS);
+
+        Set<String> dimensionKeys = dimensions.keySet();
+        for (DimensionSubsetType dim : requestedDimensions){
+            String dimension = WCSDimensionsSubsetHelper.getDimensionName(dim);
+            // skip time support
+            if (WCSDimensionsSubsetHelper.TIME_NAMES.contains(dimension.toLowerCase())) {
+                if (dimensionKeys.contains(ResourceInfo.TIME)) {
+                    // fine, we'll parse it later
+                    continue;
+                } else {
+                    throw new WCS20Exception("Invalid axis label provided: " + dimension,
+                            WCS20Exception.WCS20ExceptionCode.InvalidAxisLabel, null);
+                }
+            }
+            if (WCSDimensionsSubsetHelper.ELEVATION_NAMES.contains(dimension.toLowerCase())) {
+                if (dimensionKeys.contains(ResourceInfo.ELEVATION)) {
+                    // fine, we'll parse it later
+                    continue;
+                } else {
+                    throw new WCS20Exception("Invalid axis label provided: " + dimension,
+                            WCS20Exception.WCS20ExceptionCode.InvalidAxisLabel, null);
+                }
+            }
+
+            boolean isCustomDimension = false;
+            for (String dimensionKey : dimensionKeys){
+                if (dimensionKey.equalsIgnoreCase(dimension)) {
+                    isCustomDimension = true;
+                    break;
+                }
+            }
+            if (isCustomDimension) {
+                continue;
+            }
+            
+            if(!axesNames.contains(dimension)) {
+                throw new WCS20Exception("Invalid axis label provided: " + dimension,
+                        WCS20Exception.WCS20ExceptionCode.InvalidAxisLabel,
+                        dimension == null ? "Null" : dimension);
+            }
+
+            // did we already do something with this dimension?
+            if(foundDimensions.contains(dimension)){
+                throw new WCS20Exception("Axis label already used during subsetting",WCS20Exception.WCS20ExceptionCode.InvalidAxisLabel,dimension);
+            }
+            foundDimensions.add(dimension);
+            
+            // now decide what to do
+            final String CRS= dim.getCRS();// TODO HOW DO WE USE THIS???
+            if(dim instanceof DimensionTrimType){
+
+                // TRIMMING
+                final DimensionTrimType trim = (DimensionTrimType) dim;
+                final double low = Double.parseDouble(trim.getTrimLow());
+                final double high = Double.parseDouble(trim.getTrimHigh());
+
+                // low > high???
+                if (low > high) {
+                    throw new WCS20Exception(
+                            "Low greater than High", 
+                            WCS20Exception.WCS20ExceptionCode.InvalidSubsetting,
+                            trim.getTrimLow());
+                }
+
+                final int axisIndex = envelopeDimensionsMapper.getAxisIndex(sourceEnvelopeInSubsettingCRS, dimension);
+                if (axisIndex < 0) {
+                    throw new WCS20Exception("Invalid axis provided",WCS20Exception.WCS20ExceptionCode.InvalidAxisLabel,dimension);
+                }
+
+                // notice how we choose the order of the axes
+                subsettingEnvelope.setRange(axisIndex, low, high);
+            } else if (dim instanceof DimensionSliceType) {
+
+                // SLICING
+                final DimensionSliceType slicing= (DimensionSliceType) dim;
+                final String slicePointS = slicing.getSlicePoint();
+                final double slicePoint=Double.parseDouble(slicePointS);            
+
+                final int axisIndex=envelopeDimensionsMapper.getAxisIndex(sourceEnvelopeInSubsettingCRS, dimension);
+                if (axisIndex < 0) {
+                    throw new WCS20Exception("Invalid axis provided",WCS20Exception.WCS20ExceptionCode.InvalidAxisLabel,dimension);
+                }
+                // notice how we choose the order of the axes
+                AffineTransform affineTransform = RequestUtils.getAffineTransform(reader.getOriginalGridToWorld(PixelInCell.CELL_CENTER));
+                final double scale = axisIndex == 0 ? affineTransform.getScaleX() : -affineTransform.getScaleY();
+                subsettingEnvelope.setRange(axisIndex, slicePoint, slicePoint + scale);
+                
+                // slice point outside coverage
+                if (sourceEnvelopeInSubsettingCRS.getMinimum(axisIndex) > slicePoint || slicePoint > sourceEnvelopeInSubsettingCRS.getMaximum(axisIndex)){
+                    throw new WCS20Exception(
+                            "SlicePoint outside coverage envelope", 
+                            WCS20Exception.WCS20ExceptionCode.InvalidSubsetting,
+                            slicePointS);
+                }
+            } else {
+                throw new WCS20Exception(
+                        "Invalid element found while attempting to parse dimension subsetting request", 
+                        WCS20Exception.WCS20ExceptionCode.InvalidSubsetting,
+                        dim.getClass().toString());
+            }
+        }
+
+        //
+        // intersect with original envelope to make sure the subsetting is valid
+        //
+        GeneralEnvelope sourceEnvelope = reader.getOriginalEnvelope();
+
+        // reproject envelope  to native crs for cropping
+        try {
+            if(!CRS.equalsIgnoreMetadata(subsettingEnvelope.getCoordinateReferenceSystem(), reader.getOriginalEnvelope())){
+                // look for transform
+                final MathTransform mathTransform = CRS.findMathTransform(subsettingCRS,sourceCRS);
+                if(!mathTransform.isIdentity()){ // do we really need to reproject?
+                final GeneralEnvelope subsettingEnvelopeInSourceCRS = CRS.transform(
+                            mathTransform, 
+                            subsettingEnvelope);
+                    subsettingEnvelopeInSourceCRS.setCoordinateReferenceSystem(sourceCRS);
+
+                    // intersect
+                    subsettingEnvelopeInSourceCRS.intersect(sourceEnvelope);
+                    subsettingEnvelopeInSourceCRS.setCoordinateReferenceSystem(sourceCRS);
+
+                    // provided trim extent does not intersect coverage envelope
+                    if(subsettingEnvelopeInSourceCRS.isEmpty()){
+                        throw new WCS20Exception(
+                                "Empty intersection after subsetting", 
+                                WCS20Exception.WCS20ExceptionCode.InvalidSubsetting,"");// TODO spit our envelope trimmed
+                    }
+                    return subsettingEnvelopeInSourceCRS;
+                }
+            }
+            // we are reprojecting
+            subsettingEnvelope.intersect(sourceEnvelope);
+            subsettingEnvelope.setCoordinateReferenceSystem(reader.getCoordinateReferenceSystem());      
+
+            // provided trim extent does not intersect coverage envelope
+            if(subsettingEnvelope.isEmpty()){
+                throw new WCS20Exception(
+                        "Empty intersection after subsetting", 
+                        WCS20Exception.WCS20ExceptionCode.InvalidSubsetting,"");// TODO spit our envelope trimmed
+            }
+            return subsettingEnvelope;
+        } catch (FactoryException e) {
+            final WCS20Exception exception= new WCS20Exception(
+                    "Unable to initialize subsetting envelope",
+                    WCS20Exception.WCS20ExceptionCode.SubsettingCrsNotSupported,
+                    subsettingCRS.toWKT()); // TODO extract code
+            exception.initCause(e);
+            throw exception;
+        } catch (TransformException e) {
+            final WCS20Exception exception= new WCS20Exception(
+                    "Unable to initialize subsetting envelope",
+                    WCS20Exception.WCS20ExceptionCode.SubsettingCrsNotSupported,
+                    subsettingCRS.toWKT()); // TODO extract code
+            exception.initCause(e);
+            throw exception;
+        } 
+    }
+
+    /**
      * Parses a date range out of the dimension subsetting directives
      * @param accessor 
      * @param request
@@ -135,7 +370,7 @@ public class WCSDimensionsSubsetHelper {
      * @return
      * @throws IOException 
      */
-    public DateRange extractTimeSubset() throws IOException {
+    public DateRange extractTemporalSubset() throws IOException {
         DateRange timeSubset = null;
         if (timeDimension != null) {
             for (DimensionSubsetType dim : request.getDimensionSubset()) {
@@ -151,30 +386,29 @@ public class WCSDimensionsSubsetHelper {
                     throw new WCS20Exception("Time dimension trimming/slicing specified twice in the request",
                             WCS20Exception.WCS20ExceptionCode.InvalidSubsetting, "subset");
                 }
-    
+
                 // now decide what to do
                 if (dim instanceof DimensionTrimType) {
-    
+
                     // TRIMMING
                     final DimensionTrimType trim = (DimensionTrimType) dim;
                     final Date low = XML_CONVERTER.parseDateTime(trim.getTrimLow()).getTime();
                     final Date high = XML_CONVERTER.parseDateTime(trim.getTrimHigh()).getTime();
-    
+
                     // low > high???
                     if (low.compareTo(high) > 0) {
                         throw new WCS20Exception("Low greater than High: " + trim.getTrimLow() 
                                 + ", " + trim.getTrimHigh(),
                                 WCS20Exception.WCS20ExceptionCode.InvalidSubsetting, "subset");
                     }
-    
+
                     timeSubset = new DateRange(low, high);
                 } else if (dim instanceof DimensionSliceType) {
-    
+
                     // SLICING
                     final DimensionSliceType slicing = (DimensionSliceType) dim;
                     final String slicePointS = slicing.getSlicePoint();
                     final Date slicePoint = XML_CONVERTER.parseDateTime(slicePointS).getTime();
-    
                     timeSubset = new DateRange(slicePoint, slicePoint);
                 } else {
                     throw new WCS20Exception(
@@ -182,24 +416,16 @@ public class WCSDimensionsSubsetHelper {
                             .toString(), WCS20Exception.WCS20ExceptionCode.InvalidSubsetting, "subset");
                 }
             }
-            
+
             // right now we don't support trimming
             // TODO: revisit when we have some multidimensional output support
             if(timeSubset != null && !timeSubset.getMinValue().equals(timeSubset.getMaxValue())) {
                 throw new WCS20Exception("Trimming on time is not supported at the moment, only slicing is");
             }
-            
+
             // apply nearest neighbor matching on time
             if (timeSubset != null) {
                timeSubset = interpolateTime(timeSubset, accessor);
-            }
-
-            if (timeSubset == null) {
-                // use "current" as the default
-                Date maxTime = accessor.getMaxTime();
-                if (maxTime != null) {
-                    timeSubset = new DateRange(maxTime, maxTime);
-                }
             }
         }
         return timeSubset;
@@ -241,7 +467,7 @@ public class WCSDimensionsSubsetHelper {
                     previous = curr;
                 }
             }
-            
+
             if(newSlicePoint == null) {
                 newSlicePoint = previous;
             }
@@ -249,7 +475,7 @@ public class WCSDimensionsSubsetHelper {
         }
         return timeSubset;
     }
-    
+
     /**
      * Get the domain set as a set of dates.
      * @param domain
@@ -326,9 +552,9 @@ public class WCSDimensionsSubsetHelper {
                 }
             }
         }
-        
         return false;
     }
+
     /**
      * Parses a number range out of the dimension subsetting directives
      * @param accessor
@@ -353,10 +579,10 @@ public class WCSDimensionsSubsetHelper {
                     throw new WCS20Exception("Elevation dimension trimming/slicing specified twice in the request",
                             WCS20Exception.WCS20ExceptionCode.InvalidSubsetting, "subset");
                 }
-    
+
                 // now decide what to do
                 if (dim instanceof DimensionTrimType) {
-    
+
                     // TRIMMING
                     final DimensionTrimType trim = (DimensionTrimType) dim;
                     final Double low = XML_CONVERTER.parseDouble(trim.getTrimLow());
@@ -384,7 +610,7 @@ public class WCSDimensionsSubsetHelper {
                             .toString(), WCS20Exception.WCS20ExceptionCode.InvalidSubsetting, "subset");
                 }
             }
-            
+
             // right now we don't support trimming
             // TODO: revisit when we have some multidimensional output support
             if (elevationSubset != null && !elevationSubset.getMinValue().equals(elevationSubset.getMaxValue())) {
@@ -394,14 +620,6 @@ public class WCSDimensionsSubsetHelper {
             // apply nearest neighbor matching on elevation
             if (elevationSubset != null) {
                 interpolateElevation (elevationSubset, accessor);
-            }
-
-            if (elevationSubset == null) {
-                // use "current" as the default
-                Number maxElevation = accessor.getMaxElevation();
-                if (maxElevation != null) {
-                    elevationSubset = new NumberRange(maxElevation.getClass(), maxElevation, maxElevation);
-                }
             }
         }
         return elevationSubset;
@@ -443,7 +661,6 @@ public class WCSDimensionsSubsetHelper {
                     previous = curr;
                 }
             }
-
             if (newSlicePoint == null) {
                 newSlicePoint = previous;
             }
@@ -472,7 +689,7 @@ public class WCSDimensionsSubsetHelper {
         }
         return results;
     }
-    
+
     /**
      * Extract custom dimension subset from the current helper 
      * 
@@ -491,7 +708,11 @@ public class WCSDimensionsSubsetHelper {
             for (DimensionSubsetType dim : request.getDimensionSubset()) {
                 String dimension = getDimensionName(dim);
 
-                // only care for time dimensions
+                if (WCSDimensionsSubsetHelper.ELEVATION_NAMES.contains(dimension.toLowerCase()) || WCSDimensionsSubsetHelper.TIME_NAMES.contains(dimension.toLowerCase())) {
+                    continue;
+                }
+
+                // only care for custom dimensions
                 if (dimensionKeys.contains(dimension)) {
                     List<Object> selectedValues = new ArrayList<Object>();
                     //
@@ -516,7 +737,7 @@ public class WCSDimensionsSubsetHelper {
 
                         // SLICING
                         final DimensionSliceType slicing = (DimensionSliceType) dim;
-                        setSubsetValue(slicing, selectedValues);
+                        setSubsetValue(dimension, slicing, selectedValues);
 
                     } else {
                         throw new WCS20Exception(
@@ -536,29 +757,63 @@ public class WCSDimensionsSubsetHelper {
         return dimensionSubset;
     }
 
-    private void setSubsetValue(DimensionSliceType slicing, List<Object> selectedValues) {
+    /**
+     * Set the slice value as proper object 
+     * 
+     * @param dimension
+     * @param slicing
+     * @param selectedValues
+     * @throws IOException
+     */
+    private void setSubsetValue(String dimension, DimensionSliceType slicing, List<Object> selectedValues) throws IOException {
         final String slicePointS = slicing.getSlicePoint();
         boolean sliceSet = false;
 
-        // Try setting the value as a time
-        if (!sliceSet) {
-            sliceSet = setAsDate(slicePointS, selectedValues);
-        }
+        String domainDatatype = accessor.getDomainDatatype(dimension);
+        if (domainDatatype != null) {
+            setValues(slicePointS, selectedValues, domainDatatype);
+        } else {
+            // Try with recursive settings
 
-        // Try setting the value as an integer
-        if (!sliceSet) {
-            sliceSet = setAsInteger(slicePointS, selectedValues);
-        }
+            // Try setting the value as a time
+            if (!sliceSet) {
+                sliceSet = setAsDate(slicePointS, selectedValues);
+            }
 
-        // Try setting the value as a double
-        if (!sliceSet) {
-            sliceSet = setAsDouble(slicePointS, selectedValues);
-        }
+            // Try setting the value as an integer
+            if (!sliceSet) {
+                sliceSet = setAsInteger(slicePointS, selectedValues);
+            }
 
-        if (!sliceSet) {
-            // Setting it as a String
+            // Try setting the value as a double
+            if (!sliceSet) {
+                sliceSet = setAsDouble(slicePointS, selectedValues);
+            }
+
+            if (!sliceSet) {
+                // Setting it as a String
+                selectedValues.add(slicePointS);
+            }
+        }
+    }
+
+    /**
+     * Set the slice value as proper object depending on the datatype
+     * @param slicePointS
+     * @param selectedValues
+     * @param domainDatatype
+     */
+    private void setValues(String slicePointS, List<Object> selectedValues, String domainDatatype) {
+        if (domainDatatype.endsWith("Timestamp") || domainDatatype.endsWith("Date")) {
+            setAsDate(slicePointS, selectedValues);
+        } else if (domainDatatype.endsWith("Integer")) {
+            setAsInteger(slicePointS, selectedValues);
+        } else if (domainDatatype.endsWith("Double")) {
+            setAsDouble(slicePointS, selectedValues);
+        } else if (domainDatatype.endsWith("String")) {
             selectedValues.add(slicePointS);
         }
+        // TODO: Add support for more datatype management 
     }
 
     /**
@@ -605,7 +860,7 @@ public class WCSDimensionsSubsetHelper {
         }
         return false;
     }
-    
+
     /**
      * Parse a String as a Double or return null if impossible.
      * @param text
@@ -622,7 +877,7 @@ public class WCSDimensionsSubsetHelper {
         }
         return null;
     }
-    
+
     /**
      * Parse a String as a Range of Double or return null if impossible.
      * @param text
@@ -647,7 +902,7 @@ public class WCSDimensionsSubsetHelper {
         }
         return null;
     }
-    
+
     /**
      * Parse a String as an Integer or return null if impossible.
      * @param text
@@ -663,6 +918,47 @@ public class WCSDimensionsSubsetHelper {
             }
         }
         return null;
+    }
+
+    /**
+     * Return a {@link GridCoverageRequest} instance containing specified subsetting dimensions.
+     * 
+     * @return
+     * @throws IOException
+     */
+    public GridCoverageRequest getGridCoverageRequestSubset() throws IOException {
+        final GeneralEnvelope spatialSubset = extractSubsettingEnvelope();
+        assert spatialSubset != null && !spatialSubset.isEmpty();
+        
+        Map<String, List> dimensionsSubset = null;
+        DateRange temporalSubset = null;
+        NumberRange elevationSubset = null;
+
+        // Parse specified subset values (if any)
+        if (dimensions != null && !dimensions.isEmpty()) {
+            // extract temporal subsetting
+            temporalSubset = extractTemporalSubset();
+
+            // extract elevation subsetting
+            elevationSubset = extractElevationSubset();
+
+            // extract dimensions subsetting
+            dimensionsSubset = extractDimensionsSubset();
+        }
+
+        // Prepare subsetting request
+        GridCoverageRequest subsettingRequest = new GridCoverageRequest();
+        subsettingRequest.setSpatialSubset(spatialSubset);
+        subsettingRequest.setElevationSubset(elevationSubset);
+        subsettingRequest.setTemporalSubset(temporalSubset);
+        subsettingRequest.setDimensionsSubset(dimensionsSubset);
+
+        // Handle default values and update subsetting values if needed
+        String coverageName =  ci.getNativeCoverageName() != null ? ci.getNativeCoverageName() : reader.getGridCoverageNames()[0];
+        WCSDefaultValuesHelper defaultValuesHelper = new WCSDefaultValuesHelper(reader, accessor, request, coverageName);
+        defaultValuesHelper.setDefaults(subsettingRequest);
+
+        return subsettingRequest;
     }
 
 }

@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -18,7 +19,10 @@ import org.geoserver.catalog.MetadataMap;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.util.ReaderDimensionsAccessor;
 import org.geoserver.util.ISO8601Formatter;
+import org.geoserver.wcs2_0.exception.WCS20Exception;
+import org.geotools.coverage.grid.io.DimensionDescriptor;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
+import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
 import org.geotools.util.Utilities;
 import org.vfny.geoserver.wcs.WcsException;
 
@@ -274,7 +278,8 @@ public class WCSDimensionsHelper {
     }
 
     /**
-     * Scan the metadataMap looking for resources related to {@link DimensionInfo} objects.
+     * Scan the metadataMap looking for resources related to {@link DimensionInfo} objects and
+     * return a dimensions Map. Return an empty map if no dimensions are found.
      * 
      * @param metadata
      * @return
@@ -304,6 +309,21 @@ public class WCSDimensionsHelper {
         return dimensionsMap;
     }
 
+    public static DimensionDescriptor getDimensionDescriptor(final StructuredGridCoverage2DReader reader, final String coverageName, final String dimensionName) {
+        try {
+            List<DimensionDescriptor> descriptors = reader.getDimensionDescriptors(coverageName);
+            for (DimensionDescriptor dd : descriptors) {
+                if (dd.getName().equalsIgnoreCase(dimensionName)) {
+                    return dd;
+                }
+            }
+
+            return null;
+        } catch(IOException e) {
+            throw new WCS20Exception("Failed to locate the reader's " + dimensionName + " dimension descriptor", e);
+        }
+    }
+    
     /**
      * Return {@code true} in case the specified Key refers to a Dimension.
      * @param key
