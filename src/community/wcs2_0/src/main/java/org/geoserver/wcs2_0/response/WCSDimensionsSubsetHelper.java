@@ -804,7 +804,7 @@ public class WCSDimensionsSubsetHelper {
      * @param selectedValues
      * @param domainDatatype
      */
-    private void setValues(String slicePointS, List<Object> selectedValues, String domainDatatype) {
+    public static void setValues(String slicePointS, List<Object> selectedValues, String domainDatatype) {
         if (domainDatatype.endsWith("Timestamp") || domainDatatype.endsWith("Date")) {
             setAsDate(slicePointS, selectedValues);
         } else if (domainDatatype.endsWith("Integer")) {
@@ -823,7 +823,7 @@ public class WCSDimensionsSubsetHelper {
      * @param selectedValues
      * @return
      */
-    private boolean setAsInteger(String slicePointS, List<Object> selectedValues) {
+    private static boolean setAsInteger(String slicePointS, List<Object> selectedValues) {
         final Integer slicePoint = parseAsInteger(slicePointS);
         if (slicePoint != null) {
             selectedValues.add(slicePoint);
@@ -838,7 +838,7 @@ public class WCSDimensionsSubsetHelper {
      * @param selectedValues
      * @return
      */
-    private boolean setAsDouble(String slicePointS, List<Object> selectedValues) {
+    private static boolean setAsDouble(String slicePointS, List<Object> selectedValues) {
         final Double slicePoint = parseAsDouble(slicePointS);
         if (slicePoint != null) {
             selectedValues.add(slicePoint);
@@ -853,7 +853,7 @@ public class WCSDimensionsSubsetHelper {
      * @param selectedValues
      * @return
      */
-    private boolean setAsDate(String slicePointS, List<Object> selectedValues) {
+    private static boolean setAsDate(String slicePointS, List<Object> selectedValues) {
         final Date slicePoint = parseAsDate(slicePointS);
         if (slicePoint != null) {
             selectedValues.add(slicePoint);

@@ -88,8 +88,11 @@ public class WCSDefaultValuesHelper {
 
             // For 2D output format, we can setup default values to reduce the number of results
             if (! (reader instanceof StructuredGridCoverage2DReader)) {
+                // use standard code which gets default value from each domain which hasn't be subset
                 setStandardReaderDefaults(subsettingRequest);
             } else {
+                // Use optimized code for structured grid coverage reader which uses granuleSource queries
+                // to determine valid default values
                setDefaultsFromStructuredReader(subsettingRequest);
             }
         } 
@@ -454,6 +457,14 @@ public class WCSDefaultValuesHelper {
         return FF.between(FF.property(start), FF.literal(minValue), FF.literal(maxValue));
     }
 
+    /**
+     * A simple filter for range containment
+     * @param start
+     * @param end
+     * @param minValue
+     * @param maxValue
+     * @return
+     */
     private Filter rangeFilter(String start, String end, Object minValue, Object maxValue) {
       Filter f1 = FF.lessOrEqual(FF.property(start), FF.literal(maxValue));
       Filter f2 = FF.greaterOrEqual(FF.property(end), FF.literal(minValue));
@@ -474,9 +485,11 @@ public class WCSDefaultValuesHelper {
     private GridCoverageRequest setStandardReaderDefaults(GridCoverageRequest subsettingRequest) throws IOException {
         DateRange temporalSubset = subsettingRequest.getTemporalSubset();
         NumberRange<?> elevationSubset = subsettingRequest.getElevationSubset();
-//        Map<String, List<Object>> dimensionSubset = subsettingRequest.getDimensionsSubset();
+        Map<String, List<Object>> dimensionSubset = subsettingRequest.getDimensionsSubset();
 
         // Reader is not a StructuredGridCoverage2DReader instance. Set default ones with policy "time = max, elevation = min".
+
+        // Setting default time
         if (temporalSubset == null) {
             // use "max" as the default
             Date maxTime = accessor.getMaxTime();
@@ -485,6 +498,7 @@ public class WCSDefaultValuesHelper {
             }
         }
 
+        // Setting default elevation
         if (elevationSubset == null) {
             // use "min" as the default
             Number minElevation = accessor.getMinElevation();
@@ -493,10 +507,51 @@ public class WCSDefaultValuesHelper {
             }
         }
 
-        //TODO: set dimensionSubset
+        // Setting default custom dimensions
+        final List<String> customDomains = accessor.getCustomDomains();
+        int availableCustomDimensions = 0; 
+        int specifiedCustomDimensions = 0;
+        if (customDomains != null && !customDomains.isEmpty()) {
+            availableCustomDimensions = customDomains.size();
+            specifiedCustomDimensions = dimensionSubset != null ? dimensionSubset.size() : 0; 
+            if (dimensionSubset == null) {
+                dimensionSubset = new HashMap<String, List<Object>>();
+            }
+        }
+        if (availableCustomDimensions != specifiedCustomDimensions) {
+            setDefaultCustomDimensions(customDomains, dimensionSubset);
+        }
+
+        subsettingRequest.setDimensionsSubset(dimensionSubset);
         subsettingRequest.setTemporalSubset(temporalSubset);
         subsettingRequest.setElevationSubset(elevationSubset);
         return subsettingRequest;
     }
 
+    /**
+     * Set default custom dimensions
+     * @param customDomains
+     * @param dimensionSubset
+     * @throws IOException
+     */
+    private void setDefaultCustomDimensions(List<String> customDomains,
+            Map<String, List<Object>> dimensionSubset) throws IOException {
+
+        // Scan available custom dimensions
+        for (String customDomain : customDomains) {
+            if (!dimensionSubset.containsKey(customDomain)) {
+                List<Object> dimensionValue = new ArrayList<Object>();
+
+                // set default of the proper datatype (in case of known Domain datatype)
+                String defaultValue = accessor.getCustomDomainDefaultValue(customDomain);
+                String dataType = reader.getMetadataValue(customDomain + "_DOMAIN_DATATYPE");
+                if (dataType != null) {
+                    WCSDimensionsSubsetHelper.setValues(defaultValue, dimensionValue, dataType);
+                } else {
+                    dimensionValue.add(defaultValue);
+                }
+                dimensionSubset.put(customDomain, dimensionValue);
+            }
+        }
+    }
 }
