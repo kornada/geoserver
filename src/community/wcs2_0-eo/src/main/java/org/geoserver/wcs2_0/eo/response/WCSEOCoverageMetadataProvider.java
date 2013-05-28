@@ -12,7 +12,7 @@ import org.geoserver.ows.util.ResponseUtils;
 import org.geoserver.wcs2_0.GetCoverage;
 import org.geoserver.wcs2_0.eo.WCSEOMetadata;
 import org.geoserver.wcs2_0.response.WCS20CoverageMetadataProvider;
-import org.geoserver.wcs2_0.response.WCSTimeDimensionHelper;
+import org.geoserver.wcs2_0.response.WCSDimensionsHelper;
 import org.geoserver.wcs2_0.util.NCNameResourceCodec;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.geometry.GeneralEnvelope;
@@ -114,22 +114,22 @@ public class WCSEOCoverageMetadataProvider implements WCS20CoverageMetadataProvi
         }
         GridCoverage2DReader reader = (GridCoverage2DReader) ci.getGridCoverageReader(null, null);
         String coverageId = NCNameResourceCodec.encode(ci);
-        WCSTimeDimensionHelper timeHelper = new WCSTimeDimensionHelper(time, reader, coverageId);
+        WCSDimensionsHelper dimensionHelper = new WCSDimensionsHelper(time, reader, coverageId);
         tx.start("wcseo:EOMetadata");
         tx.start("eop:EarthObservation", atts("gml:id", coverageId + "_metadata"));
         
         // phenomenon time
         tx.start("om:phenomenonTime");
         tx.start("gml:TimePeriod", atts("gml:id", coverageId + "_tp"));
-        element(tx, "gml:beginPosition", timeHelper.getBeginPosition(), null);
-        element(tx, "gml:endPosition", timeHelper.getEndPosition(), null);
+        element(tx, "gml:beginPosition", dimensionHelper.getBeginTime(), null);
+        element(tx, "gml:endPosition", dimensionHelper.getEndTime(), null);
         tx.end("gml:TimePeriod");
         tx.end("om:phenomenonTime");
         
         // resultTime
         tx.start("om:resultTime");
         tx.start("gml:TimeInstant", atts("gml:id", coverageId + "_rt"));
-        element(tx, "gml:timePosition", timeHelper.getEndPosition(), null);
+        element(tx, "gml:timePosition", dimensionHelper.getEndTime(), null);
         tx.end("gml:TimeInstant");
         tx.end("om:resultTime");
         

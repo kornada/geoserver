@@ -28,7 +28,7 @@ import org.geoserver.wcs2_0.eo.WCSEOMetadata;
 import org.geoserver.wcs2_0.exception.WCS20Exception;
 import org.geoserver.wcs2_0.response.WCS20DescribeCoverageTransformer;
 import org.geoserver.wcs2_0.response.WCS20DescribeCoverageTransformer.WCS20DescribeCoverageTranslator;
-import org.geoserver.wcs2_0.response.WCSTimeDimensionHelper;
+import org.geoserver.wcs2_0.response.WCSDimensionsHelper;
 import org.geoserver.wcs2_0.util.EnvelopeAxesLabelsMapper;
 import org.geotools.coverage.grid.io.DimensionDescriptor;
 import org.geotools.coverage.grid.io.GranuleSource;
@@ -217,12 +217,9 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
                     element("wcseo:DatasetSeriesId", datasetId);
 
                     // encode the time
-                    DimensionInfo time = ci.getMetadata().get(ResourceInfo.TIME,
-                            DimensionInfo.class);
-                    WCSTimeDimensionHelper timeHelper = new WCSTimeDimensionHelper(time, reader,
-                            datasetId);
-                    dcTranslator.encodeTimePeriod(timeHelper.getBeginPosition(),
-                            timeHelper.getEndPosition(), datasetId + "_timeperiod", null, null);
+                    DimensionInfo time = ci.getMetadata().get(ResourceInfo.TIME, DimensionInfo.class);
+                    WCSDimensionsHelper timeHelper = new WCSDimensionsHelper(time, reader, datasetId);
+                    dcTranslator.encodeTimePeriod(timeHelper.getBeginTime(), timeHelper.getEndTime(), datasetId + "_timeperiod", null, null);
 
                     end("wcseo:DatasetSeriesDescription");
                 } catch (IOException e) {
@@ -322,7 +319,7 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
 
                     // only report in output coverages that have at least one matched granule
                     if(!collection.isEmpty()) {
-                        DimensionDescriptor time = getTimeDescriptor(reader, name);
+                        DimensionDescriptor time = WCSDimensionsHelper.getDimensionDescriptor(reader, name, "TIME");
                         CoverageGranules granules = new CoverageGranules(ci, name, reader, collection, time);
                         results.add(granules);
                     }
@@ -339,23 +336,7 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
                     }
                 }
             }
-
             return results;
-        }
-        
-        public DimensionDescriptor getTimeDescriptor(StructuredGridCoverage2DReader reader, String coverageName) {
-            try {
-                List<DimensionDescriptor> descriptors = reader.getDimensionDescriptors(coverageName);
-                for (DimensionDescriptor dd : descriptors) {
-                    if (dd.getName().equalsIgnoreCase("TIME")) {
-                        return dd;
-                    }
-                }
-
-                return null;
-            } catch(IOException e) {
-                throw new WCS20Exception("Failed to locate the reader's time dimension descriptor", e);
-            }
         }
 
         private Query buildQueryFromDimensionTrims(DescribeEOCoverageSetType dcs,
@@ -451,7 +432,7 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
 
             // temporal subset
             if (timeRange != null && filter != Filter.EXCLUDE) {
-                DimensionDescriptor timeDescriptor = getTimeDescriptor(reader, coverageName);
+                DimensionDescriptor timeDescriptor = WCSDimensionsHelper.getDimensionDescriptor(reader, coverageName, "TIME");
                 String start = timeDescriptor.getStartAttribute();
                 String end = timeDescriptor.getEndAttribute();
                 

@@ -63,7 +63,7 @@ public class ReaderDimensionsAccessor {
         }
         
     };
-    
+
     /**
      * Comparator for TreeSet made either by Double objects, or by NumberRange objects
      */
@@ -129,10 +129,9 @@ public class ReaderDimensionsAccessor {
                 LOGGER.log(Level.WARNING, e.getMessage(), e);
             }
         }
-
         return values;
     }
-    
+
     /**
      * Parses either a time expression in ISO format, or a time period in start/end format
      * @param df
@@ -150,7 +149,7 @@ public class ReaderDimensionsAccessor {
             return df.parse(timeOrRange);
         }
     }
-    
+
     /**
      * Parses the specified value as a NumberRange if it's in the min/max form, as a Double otherwise
      * @param val
@@ -253,12 +252,9 @@ public class ReaderDimensionsAccessor {
                 LOGGER.log(Level.WARNING, e.getMessage(), e);
             }
         }
-
         return elevations;
     }
 
-    
-    
     /**
      * Returns the max value for the elevation (as a Double, or as a NumberRange)
      * 
@@ -302,7 +298,7 @@ public class ReaderDimensionsAccessor {
             throw new RuntimeException("Failed to get minimum elevation from coverage reader", e);
         }
     }
-    
+
     /**
      * Lists the custom domains of a raster data set
      * @return
@@ -322,10 +318,19 @@ public class ReaderDimensionsAccessor {
                 }
             }
         }
-
         return new ArrayList<String>(result);
     }
 
+    /**
+     * Return the domain datatype (if available)
+     * @param domainName
+     * @return
+     * @throws IOException 
+     */
+    public String getDomainDatatype(final String domainName) throws IOException {
+        return reader.getMetadataValue(domainName.toUpperCase() + "_DOMAIN_DATATYPE");
+    }
+    
     /**
      * True if the reader has a dimension with the given name
      * @throws IOException 
@@ -389,6 +394,4 @@ public class ReaderDimensionsAccessor {
         Utilities.ensureNonNull("name", domain);
         return metadataNames.contains(domain.toUpperCase() + "_DOMAIN_RESOLUTION");
     }
-
-    
 }

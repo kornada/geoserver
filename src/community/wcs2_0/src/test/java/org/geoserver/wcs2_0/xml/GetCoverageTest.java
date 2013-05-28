@@ -588,6 +588,66 @@ public class GetCoverageTest extends WCSTestSupport {
         // timeranges is really just an expanded watertemp 
         checkWaterTempValue(request, 14.52999974018894136);
     }
+    
+    @Test
+    public void testCoverageTimeElevationSlicingAgainstLowestOldestGranule() throws Exception {
+        setupRasterDimension(getLayerId(TIMERANGES), ResourceInfo.TIME, DimensionPresentation.LIST, null);
+        setupRasterDimension(getLayerId(TIMERANGES), ResourceInfo.ELEVATION, DimensionPresentation.LIST, null);
+        setupRasterDimension(getLayerId(TIMERANGES), ResourceInfo.CUSTOM_DIMENSION_PREFIX + "WAVELENGTH", DimensionPresentation.LIST, null);
+        final File xml = new File("./src/test/resources/trimming/requestGetCoverageTimeElevationCustomSlicingXML.xml");
+        String request= FileUtils.readFileToString(xml);
+        request = request.replace("${coverageId}", "sf__timeranges");
+        request = request.replace("${slicePointElevation}", "20");
+        request = request.replace("${slicePointTime}", "2008-10-31T00:00:00.000Z");
+        request = request.replace("${Custom}", "WAVELENGTH");
+        request = request.replace("${slicePointCustom}", "20");
+        // timeranges is really just an expanded watertemp 
+        checkWaterTempValue(request, 18.478999927756377);
+    }
+
+    @Test
+    public void testCoverageTimeElevationSlicingAgainstHighestNewestGranuleLatestWavelength() throws Exception {
+        setupRasterDimension(getLayerId(TIMERANGES), ResourceInfo.TIME, DimensionPresentation.LIST, null);
+        setupRasterDimension(getLayerId(TIMERANGES), ResourceInfo.ELEVATION, DimensionPresentation.LIST, null);
+        setupRasterDimension(getLayerId(TIMERANGES), ResourceInfo.CUSTOM_DIMENSION_PREFIX + "WAVELENGTH", DimensionPresentation.LIST, null);
+        final File xml = new File("./src/test/resources/trimming/requestGetCoverageTimeElevationCustomSlicingXML.xml");
+        String request= FileUtils.readFileToString(xml);
+        request = request.replace("${coverageId}", "sf__timeranges");
+        request = request.replace("${slicePointElevation}", "140");
+        request = request.replace("${slicePointTime}", "2008-11-07T00:00:00.000Z");
+        request = request.replace("${Custom}", "WAVELENGTH");
+        request = request.replace("${slicePointCustom}", "80");
+        // timeranges is really just an expanded watertemp 
+        checkWaterTempValue(request, 14.52999974018894136);
+    }
+
+    @Test
+    public void testCoverageTimeElevationSlicingAgainstHighestNewestGranule() throws Exception {
+        setupRasterDimension(getLayerId(TIMERANGES), ResourceInfo.TIME, DimensionPresentation.LIST, null);
+        setupRasterDimension(getLayerId(TIMERANGES), ResourceInfo.ELEVATION, DimensionPresentation.LIST, null);
+        setupRasterDimension(getLayerId(TIMERANGES), ResourceInfo.CUSTOM_DIMENSION_PREFIX + "WAVELENGTH", DimensionPresentation.LIST, null);
+        final File xml = new File("./src/test/resources/trimming/requestGetCoverageTimeElevationSlicingXML.xml");
+        String request= FileUtils.readFileToString(xml);
+        request = request.replace("${coverageId}", "sf__timeranges");
+        request = request.replace("${slicePointElevation}", "140");
+        request = request.replace("${slicePointTime}", "2008-11-07T00:00:00.000Z");
+        // timeranges is really just an expanded watertemp 
+        checkWaterTempValue(request, 14.52999974018894136);
+    }
+
+    @Test
+    public void testCoverageElevationSlicingDefaultTime() throws Exception {
+        setupRasterDimension(getLayerId(TIMERANGES), ResourceInfo.TIME, DimensionPresentation.LIST, null);
+        setupRasterDimension(getLayerId(TIMERANGES), ResourceInfo.ELEVATION, DimensionPresentation.LIST, null);
+        setupRasterDimension(getLayerId(TIMERANGES), ResourceInfo.CUSTOM_DIMENSION_PREFIX + "WAVELENGTH", DimensionPresentation.LIST, null);
+        final File xml = new File("./src/test/resources/trimming/requestGetCoverageElevationSlicingXML.xml");
+        String request= FileUtils.readFileToString(xml);
+        request = request.replace("${coverageId}", "sf__timeranges");
+        request = request.replace("${slicePoint}", "140");
+
+        // timeranges is really just an expanded watertemp 
+        checkWaterTempValue(request, 14.52999974018894136);
+    }
 
     private void checkWaterTempValue(String request, double expectedValue) throws Exception, IOException,
             DataSourceException {

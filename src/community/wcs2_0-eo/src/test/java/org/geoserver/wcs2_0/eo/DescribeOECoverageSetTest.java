@@ -12,8 +12,8 @@ public class DescribeOECoverageSetTest extends WCSEOTestSupport {
 
     @Test
     public void testBasic() throws Exception {
-        Document dom = getAsDOM("wcs?request=DescribeEOCoverageSet&version=2.0.1&service=WCS&eoid=sf__watertemp_dss");
-        // print(dom);
+        Document dom = getAsDOM("wcs?request=DescribeEOCoverageSet&version=2.0.1&service=WCS&eoid=sf__timeranges_dss");
+//         print(dom);
         
         // main structure is there
         assertEquals("1", xpath.evaluate("count(/wcseo:EOCoverageSetDescription)", dom));
@@ -21,25 +21,25 @@ public class DescribeOECoverageSetTest extends WCSEOTestSupport {
         assertEquals("1", xpath.evaluate("count(/wcseo:EOCoverageSetDescription/wcseo:DatasetSeriesDescriptions)", dom));
         
         // expected granules are there
-        assertEquals("4", xpath.evaluate("/wcseo:EOCoverageSetDescription/@numberMatched", dom));
-        assertEquals("4", xpath.evaluate("/wcseo:EOCoverageSetDescription/@numberReturned", dom));
-        assertEquals("4", xpath.evaluate("count(//wcs:CoverageDescriptions/wcs:CoverageDescription)", dom));
+        assertEquals("12", xpath.evaluate("/wcseo:EOCoverageSetDescription/@numberMatched", dom));
+        assertEquals("12", xpath.evaluate("/wcseo:EOCoverageSetDescription/@numberReturned", dom));
+        assertEquals("12", xpath.evaluate("count(//wcs:CoverageDescriptions/wcs:CoverageDescription)", dom));
         
         // check one granule
-        String base = "//wcs:CoverageDescriptions/wcs:CoverageDescription[@gml:id='sf__watertemp_granule_watertemp.4']";
+        String base = "//wcs:CoverageDescriptions/wcs:CoverageDescription[@gml:id='sf__timeranges_granule_time_domainsRanges.4']";
         assertEquals("1", xpath.evaluate("count(" + base + ")", dom));
         // ... the time has been sliced to this single granule
         assertEquals("2008-10-31T00:00:00.000Z", xpath.evaluate(base + "/gml:boundedBy/gml:EnvelopeWithTimePeriod/gml:beginPosition", dom));
-        assertEquals("2008-10-31T00:00:00.000Z", xpath.evaluate(base + "/gml:boundedBy/gml:EnvelopeWithTimePeriod/gml:endPosition", dom));
+        assertEquals("2008-11-03T00:00:00.000Z", xpath.evaluate(base + "/gml:boundedBy/gml:EnvelopeWithTimePeriod/gml:endPosition", dom));
         assertEquals("2008-10-31T00:00:00.000Z", xpath.evaluate(base + "/gmlcov:metadata/gmlcov:Extension/wcseo:EOMetadata" +
         		"/eop:EarthObservation/om:phenomenonTime/gml:TimePeriod/gml:beginPosition", dom));
         
         // check the DatasetSeriesDescriptions
         assertEquals("1", xpath.evaluate("count(/wcseo:EOCoverageSetDescription/wcseo:DatasetSeriesDescriptions/wcseo:DatasetSeriesDescription)", dom));
         assertEquals("1", xpath.evaluate("count(//wcseo:DatasetSeriesDescription/gml:boundedBy/gml:Envelope)", dom));
-        assertEquals("sf__watertemp_dss", xpath.evaluate("//wcseo:DatasetSeriesDescription/wcseo:DatasetSeriesId", dom));
+        assertEquals("sf__timeranges_dss", xpath.evaluate("//wcseo:DatasetSeriesDescription/wcseo:DatasetSeriesId", dom));
         assertEquals("2008-10-31T00:00:00.000Z", xpath.evaluate("//wcseo:DatasetSeriesDescription/gml:TimePeriod/gml:beginPosition", dom));
-        assertEquals("2008-11-01T00:00:00.000Z", xpath.evaluate("//wcseo:DatasetSeriesDescription/gml:TimePeriod/gml:endPosition", dom));
+        assertEquals("2008-11-07T00:00:00.000Z", xpath.evaluate("//wcseo:DatasetSeriesDescription/gml:TimePeriod/gml:endPosition", dom));
     }
     
     @Test
@@ -110,17 +110,17 @@ public class DescribeOECoverageSetTest extends WCSEOTestSupport {
     @Test
     public void testSpatioTemporalDataset() throws Exception {
         Document dom = getAsDOM("wcs?request=DescribeEOCoverageSet&version=2.0.1&service=WCS&eoid=sf__spatio-temporal_dss");
-        // print(dom);
+//         print(dom);
         
         // this one has 16 granules
         assertEquals("16", xpath.evaluate("count(//wcs:CoverageDescriptions/wcs:CoverageDescription)", dom));
         
         // four of which start at one of these corners (2 times, 2 elevations) (check the bbox is actually the one of the granule, that is)
         String envelopeBase = "//wcs:CoverageDescriptions/wcs:CoverageDescription/gml:boundedBy/gml:EnvelopeWithTimePeriod";
-        assertEquals("4", xpath.evaluate("count(" + envelopeBase + "[gml:lowerCorner='42.000641593750004 0.23722100000000002'])", dom));
-        assertEquals("4", xpath.evaluate("count(" + envelopeBase + "[gml:lowerCorner='42.000641593750004 9.424764334960939'])", dom));
-        assertEquals("4", xpath.evaluate("count(" + envelopeBase + "[gml:lowerCorner='40.56208080273438 9.424764334960939'])", dom));
-        assertEquals("4", xpath.evaluate("count(" + envelopeBase + "[gml:lowerCorner='40.56208080273438 0.23722100000000002'])", dom));
+        assertEquals("4", xpath.evaluate("count(" + envelopeBase + "[gml:lowerCorner='42.000641593750004 0.23722100000000002 0.0'])", dom));
+        assertEquals("4", xpath.evaluate("count(" + envelopeBase + "[gml:lowerCorner='42.000641593750004 9.424764334960939 0.0'])", dom));
+        assertEquals("4", xpath.evaluate("count(" + envelopeBase + "[gml:lowerCorner='40.56208080273438 9.424764334960939 0.0'])", dom));
+        assertEquals("4", xpath.evaluate("count(" + envelopeBase + "[gml:lowerCorner='40.56208080273438 0.23722100000000002 0.0'])", dom));
         
         // check also by time, they should be 8 and 8
         assertEquals("8", xpath.evaluate("count(" + envelopeBase + "[gml:beginPosition='2008-10-31T00:00:00.000Z' and gml:endPosition='2008-10-31T00:00:00.000Z'])", dom));

@@ -4,10 +4,14 @@
  */
 package org.geoserver.wcs2_0;
 
+import java.util.List;
+import java.util.Map;
+
 import javax.media.jai.Interpolation;
 
 import org.geotools.geometry.GeneralEnvelope;
 import org.geotools.util.DateRange;
+import org.geotools.util.NumberRange;
 import org.opengis.filter.Filter;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
@@ -24,12 +28,16 @@ public class GridCoverageRequest {
 
     DateRange temporalSubset;
 
+    NumberRange<?> elevationSubset;
+
+    Map<String, List<Object>> dimensionsSubset;
+
     CoordinateReferenceSystem outputCRS;
 
     Interpolation spatialInterpolation;
-    
+
     Interpolation temporalInterpolation;
-    
+
     Filter filter;
 
     public GeneralEnvelope getSpatialSubset() {
@@ -46,6 +54,14 @@ public class GridCoverageRequest {
 
     public void setTemporalSubset(DateRange temporalSubset) {
         this.temporalSubset = temporalSubset;
+    }
+
+    public NumberRange<?> getElevationSubset() {
+        return elevationSubset;
+    }
+
+    public void setElevationSubset(NumberRange<?> elevationSubset) {
+        this.elevationSubset = elevationSubset;
     }
 
     public CoordinateReferenceSystem getOutputCRS() {
@@ -79,6 +95,12 @@ public class GridCoverageRequest {
     public void setFilter(Filter filter) {
         this.filter = filter;
     }
-    
-    
+
+    public Map<String, List<Object>> getDimensionsSubset() {
+        return dimensionsSubset;
+    }
+
+    public void setDimensionsSubset(Map<String, List<Object>> dimensionsSubset) {
+        this.dimensionsSubset = dimensionsSubset;
+    }
 }

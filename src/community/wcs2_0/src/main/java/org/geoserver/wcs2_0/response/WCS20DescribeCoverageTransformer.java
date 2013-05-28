@@ -7,6 +7,7 @@ package org.geoserver.wcs2_0.response;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import javax.measure.unit.Unit;
@@ -18,7 +19,7 @@ import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.LayerInfo;
-import org.geoserver.catalog.ResourceInfo;
+import org.geoserver.catalog.MetadataMap;
 import org.geoserver.wcs.CoverageCleanerCallback;
 import org.geoserver.wcs.WCSInfo;
 import org.geoserver.wcs.responses.CoverageResponseDelegateFinder;
@@ -165,13 +166,16 @@ public class WCS20DescribeCoverageTransformer extends GMLTransformer {
         public void handleCoverageDescription(String encodedId, CoverageInfo ci) {
 
              try {
-                // see if we have to handle time
-                WCSTimeDimensionHelper timeHelper = null;
-                DimensionInfo time = ci.getMetadata().get(ResourceInfo.TIME, DimensionInfo.class);
-                if(time != null && time.isEnabled()) {
-                    timeHelper = new WCSTimeDimensionHelper(time, RequestUtils.getCoverageReader(ci), encodedId);
+                // see if we have to handle time, elevation and additional dimensions
+                WCSDimensionsHelper dimensionsHelper = null;
+                MetadataMap metadata = ci.getMetadata();
+                Map<String, DimensionInfo> dimensionsMap = WCSDimensionsHelper.getDimensionsFromMetadata(metadata);
+
+                // Setup a dimension helper in case we found some dimensions for that coverage
+                if (!dimensionsMap.isEmpty()) {
+                    dimensionsHelper = new WCSDimensionsHelper(dimensionsMap, RequestUtils.getCoverageReader(ci), encodedId);
                 }
-                
+
                 GridCoverage2DReader reader = (GridCoverage2DReader) ci.getGridCoverageReader(null, null);
                 if (reader== null) {
                     throw new WCS20Exception("Unable to read sample coverage for " + ci.getName());
@@ -209,12 +213,16 @@ public class WCS20DescribeCoverageTransformer extends GMLTransformer {
                 for (String axisName : axesNames) {
                     builder.append(axisName).append(" ");
                 }
-                if(timeHelper != null) {
+                if (dimensionsHelper != null && dimensionsHelper.getElevationDimension() != null) {
+                    builder.append("elevation ");
+                }
+                
+                if (dimensionsHelper != null && dimensionsHelper.getTimeDimension() != null) {
                     builder.append("time ");
                 }
                 String axesLabel = builder.substring(0, builder.length() - 1);
                 GeneralEnvelope envelope = reader.getOriginalEnvelope();
-                handleBoundedBy(envelope, axisSwap, srsName, axesLabel, timeHelper);
+                handleBoundedBy(envelope, axisSwap, srsName, axesLabel, dimensionsHelper);
 
                 // coverage id
                 element("wcs:CoverageId", encodedId);
@@ -223,7 +231,7 @@ public class WCS20DescribeCoverageTransformer extends GMLTransformer {
                 handleCoverageFunction((GridEnvelope2D) reader.getOriginalGridRange(), axisSwap);
 
                 // metadata
-                handleMetadata(ci, timeHelper);
+                handleMetadata(ci, dimensionsHelper);
 
                 // handle domain
                 builder.setLength(0);
