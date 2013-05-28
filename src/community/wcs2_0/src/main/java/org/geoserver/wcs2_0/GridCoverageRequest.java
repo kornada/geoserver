@@ -30,7 +30,7 @@ public class GridCoverageRequest {
 
     NumberRange<?> elevationSubset;
 
-    Map<String, List> dimensionsSubset;
+    Map<String, List<Object>> dimensionsSubset;
 
     CoordinateReferenceSystem outputCRS;
 
@@ -96,11 +96,11 @@ public class GridCoverageRequest {
         this.filter = filter;
     }
 
-    public Map<String, List> getDimensionsSubset() {
+    public Map<String, List<Object>> getDimensionsSubset() {
         return dimensionsSubset;
     }
 
-    public void setDimensionsSubset(Map<String, List> dimensionsSubset) {
+    public void setDimensionsSubset(Map<String, List<Object>> dimensionsSubset) {
         this.dimensionsSubset = dimensionsSubset;
     }
 }

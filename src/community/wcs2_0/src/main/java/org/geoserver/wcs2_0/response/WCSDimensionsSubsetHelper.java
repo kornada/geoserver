@@ -700,8 +700,8 @@ public class WCSDimensionsSubsetHelper {
      * @return
      * @throws IOException 
      */
-    public Map<String, List> extractDimensionsSubset() throws IOException {
-        Map<String, List> dimensionSubset = new HashMap<String, List>();
+    public Map<String, List<Object>> extractDimensionsSubset() throws IOException {
+        Map<String, List<Object>> dimensionSubset = new HashMap<String, List<Object>>();
 
         if (dimensions != null && !dimensions.isEmpty()) {
             Set<String> dimensionKeys = dimensions.keySet();
@@ -930,7 +930,7 @@ public class WCSDimensionsSubsetHelper {
         final GeneralEnvelope spatialSubset = extractSubsettingEnvelope();
         assert spatialSubset != null && !spatialSubset.isEmpty();
         
-        Map<String, List> dimensionsSubset = null;
+        Map<String, List<Object>> dimensionsSubset = null;
         DateRange temporalSubset = null;
         NumberRange elevationSubset = null;
 

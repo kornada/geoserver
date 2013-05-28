@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import net.opengis.wcs20.GetCoverageType;
 
@@ -106,23 +108,21 @@ public class WCSDefaultValuesHelper {
         // Get subsetting request
         DateRange temporalSubset = subsettingRequest.getTemporalSubset();
         NumberRange<?> elevationSubset = subsettingRequest.getElevationSubset();
-        Map<String, List> dimensionSubset = subsettingRequest.getDimensionsSubset();
-        GeneralEnvelope envelope = subsettingRequest.getSpatialSubset();
-        
-//        final int specifiedDimensionsSubset = dimensionSubset != null ? dimensionSubset.size() : 0;
+        Map<String, List<Object>> dimensionsSubset = subsettingRequest.getDimensionsSubset();
+        GeneralEnvelope envelopeSubset = subsettingRequest.getSpatialSubset();
+
+        final int specifiedDimensionsSubset = dimensionsSubset != null ? dimensionsSubset.size() : 0;
 
         // Casting to StructuredGridCoverage2DReader
-        StructuredGridCoverage2DReader structuredReader = (StructuredGridCoverage2DReader) reader;
+        final StructuredGridCoverage2DReader structuredReader = (StructuredGridCoverage2DReader) reader;
 
         // Getting dimension descriptors
-        List<DimensionDescriptor> dimensionDescriptors = structuredReader.getDimensionDescriptors(coverageName);
-
+        final List<DimensionDescriptor> dimensionDescriptors = structuredReader.getDimensionDescriptors(coverageName);
         DimensionDescriptor timeDimension = null;
         DimensionDescriptor elevationDimension = null;
-//        List<DimensionDescriptor> additionalDimensions = new ArrayList<DimensionDescriptor>();
-//        int dimensions = 0;
+        final List<DimensionDescriptor> customDimensions = new ArrayList<DimensionDescriptor>();
+        int dimensions = 0;
 
-        //TODO: Add custom dimension defaults
         // Collect dimension Descriptor info
         for (DimensionDescriptor dimensionDescriptor: dimensionDescriptors) {
             if (dimensionDescriptor.getName().equalsIgnoreCase(ResourceInfo.TIME)) {
@@ -130,23 +130,23 @@ public class WCSDefaultValuesHelper {
             } else if (dimensionDescriptor.getName().equalsIgnoreCase(ResourceInfo.ELEVATION)) {
                 elevationDimension = dimensionDescriptor;
             } else {
-//                additionalDimensions.add(dimensionDescriptor);
-//                dimensions++;
+                customDimensions.add(dimensionDescriptor);
+                dimensions++;
             }
         }
-        
+
         final boolean defaultTimeNeeded = temporalSubset == null && timeDimension != null;
         final boolean defaultElevationNeeded = elevationSubset == null && elevationDimension != null;
-//        final boolean defaultCustomDimensionsNeeded = dimensions != specifiedDimensionsSubset;
+        final boolean defaultCustomDimensionsNeeded = dimensions != specifiedDimensionsSubset;
 
         // Note that only Slicing is currently supported;
-        if (defaultTimeNeeded || defaultElevationNeeded) {
+        if (defaultTimeNeeded || defaultElevationNeeded || defaultCustomDimensionsNeeded) {
 
             // Get granules source
             GranuleSource source = structuredReader.getGranules(coverageName, true);
 
             // Set filtering query matching the specified subsets. 
-            Filter finalFilter = setFilters(temporalSubset, elevationSubset, envelope, structuredReader, timeDimension, elevationDimension);
+            Filter finalFilter = setFilters(temporalSubset, elevationSubset, envelopeSubset, dimensionsSubset, structuredReader, timeDimension, elevationDimension, customDimensions);
             Query query = new Query();
 
             // Set sorting order (default Policy is using Max... therefore Descending order)
@@ -158,16 +158,24 @@ public class WCSDefaultValuesHelper {
             SimpleFeatureIterator features = granulesCollection.features();
             try {
                 if (features.hasNext()) {
-                    SimpleFeature f = features.next();
+                    final SimpleFeature feature = features.next();
 
-                    // Setting defaults from the resulting query
+                    // Default time
                     if (defaultTimeNeeded && timeDimension != null) {
-                        temporalSubset = setDefaultTemporalSubset(timeDimension, f);
+                        temporalSubset = setDefaultTemporalSubset(timeDimension, feature);
                         subsettingRequest.setTemporalSubset(temporalSubset);
                     }
+
+                    // Default elevation
                     if (defaultElevationNeeded && elevationDimension != null) {
-                        elevationSubset = setDefaultElevationSubset(elevationDimension, f);
+                        elevationSubset = setDefaultElevationSubset(elevationDimension, feature);
                         subsettingRequest.setElevationSubset(elevationSubset);
+                    }
+
+                    // Default custom dimensions
+                    if (defaultCustomDimensionsNeeded && !customDimensions.isEmpty()) {
+                        dimensionsSubset = setDefaultDimensionsSubset(customDimensions, feature);
+                        subsettingRequest.setDimensionsSubset(dimensionsSubset);
                     }
                 }
             } finally {
@@ -176,8 +184,30 @@ public class WCSDefaultValuesHelper {
                 }
             }
         }
-        
         return subsettingRequest;
+    }
+
+    /**
+     * Set default for custom dimensions, taking values from the feature resulting from the query.
+     * @param customDimensions
+     * @param feature
+     * @return
+     */
+    private Map<String, List<Object>> setDefaultDimensionsSubset(
+            List<DimensionDescriptor> customDimensions, SimpleFeature feature) {
+        Map<String, List<Object>> dimensionsSubset = new HashMap<String, List<Object>>();
+        for (DimensionDescriptor dimensionDescriptor: customDimensions) {
+
+            // TODO: Add support for ranged additional dimensions
+            final String start = dimensionDescriptor.getStartAttribute();
+            Object value = feature.getAttribute(start);
+
+            //Replace specified values since they have been anyway set in the filters 
+            List<Object> dimensionValues = new ArrayList<Object>();
+            dimensionValues.add(value);
+            dimensionsSubset.put(dimensionDescriptor.getName().toUpperCase(), dimensionValues);
+        }
+        return dimensionsSubset;
     }
 
     /**
@@ -215,7 +245,8 @@ public class WCSDefaultValuesHelper {
     }
 
     /**
-     * Current policy is to use the max value as default. Setting DESCENDING order to get the max value of attributes
+     * Current policy is to use the max value as default for time and min value as default for elevation.
+     * 
      * @param query
      * @param timeDimension
      * @param elevationDimension
@@ -229,7 +260,7 @@ public class WCSDefaultValuesHelper {
         }
         if (elevationDimension != null) {
             clauses.add(new SortByImpl(FeatureUtilities.DEFAULT_FILTER_FACTORY.property(elevationDimension.getStartAttribute()),
-                    SortOrder.DESCENDING));
+                    SortOrder.ASCENDING));
         }
         final SortBy[] sb = clauses.toArray(new SortBy[] {});
         query.setSortBy(sb);
@@ -240,15 +271,18 @@ public class WCSDefaultValuesHelper {
      * Setup filter query on top of specified subsets values to return only granules satisfying the specified conditions.
      * @param temporalSubset
      * @param elevationSubset
-     * @param envelope 
+     * @param envelopeSubset 
+     * @param dimensionSubset 
      * @param reader 
      * @param timeDimension
      * @param elevationDimension
+     * @param additionalDimensions 
      * @return
      * @throws IOException 
      */
-    private Filter setFilters(DateRange temporalSubset, NumberRange<?> elevationSubset,
-            GeneralEnvelope envelope, StructuredGridCoverage2DReader reader, DimensionDescriptor timeDimension, DimensionDescriptor elevationDimension) 
+    private Filter setFilters(DateRange temporalSubset, NumberRange<?> elevationSubset, GeneralEnvelope envelopeSubset, 
+            Map<String, List<Object>> dimensionSubset, StructuredGridCoverage2DReader reader, DimensionDescriptor timeDimension, 
+            DimensionDescriptor elevationDimension, List<DimensionDescriptor> additionalDimensions) 
                     throws IOException {
         List<Filter> filters = new ArrayList<Filter>();
 
@@ -263,27 +297,11 @@ public class WCSDefaultValuesHelper {
                         elevationDimension.getStartAttribute(),
                         elevationDimension.getEndAttribute());
 
-        Filter envelopeFilter = null;
         // setting envelope filter
-        if (envelope != null) {
-            Polygon polygon = JTS.toGeometry(new ReferencedEnvelope(envelope));
-            GeometryDescriptor geom = reader.getGranules(coverageName, true).getSchema().getGeometryDescriptor();
-            PropertyName geometryProperty = FF.property(geom.getLocalName());
-            Geometry nativeCRSPolygon;
-            try {
-                nativeCRSPolygon = JTS.transform(polygon, CRS.findMathTransform(DefaultGeographicCRS.WGS84,
-                                reader.getCoordinateReferenceSystem()));
-                Literal polygonLiteral = FF.literal(nativeCRSPolygon);
-                // TODO: Check that geom operation. Should I do intersection or containment check?
-                // if(overlaps) {
-                // envelopeFilter = FF.intersects(geometryProperty, polygonLiteral);
-                // } else {
-                envelopeFilter = FF.within(geometryProperty, polygonLiteral);
-                // }
-            } catch (Exception e) {
-                throw new IOException(e);
-            }
-        }
+        Filter envelopeFilter = setEnevelopeFilter(envelopeSubset, reader);
+
+        // Setting dimensional filters
+        Filter additionalDimensionsFilter = setAdditionalDimensionsFilter(dimensionSubset, additionalDimensions);
 
         // Updating filters 
         if (elevationFilter != null) {
@@ -295,10 +313,92 @@ public class WCSDefaultValuesHelper {
         if (envelopeFilter != null) {
             filters.add(envelopeFilter);
         }
+        if (additionalDimensionsFilter != null) {
+            filters.add(additionalDimensionsFilter);
+        }
 
         // Merging all filters
         Filter finalFilter = FF.and(filters);
         return finalFilter;
+    }
+
+    /**
+     * Set envelope filter to restrict the results to the specified envelope
+     * @param envelopeSubset
+     * @param reader
+     * @return
+     * @throws IOException
+     */
+    private Filter setEnevelopeFilter(GeneralEnvelope envelopeSubset,
+            StructuredGridCoverage2DReader reader) throws IOException {
+        Filter envelopeFilter = null;
+        if (envelopeSubset != null) {
+            Polygon polygon = JTS.toGeometry(new ReferencedEnvelope(envelopeSubset));
+            GeometryDescriptor geom = reader.getGranules(coverageName, true).getSchema().getGeometryDescriptor();
+            PropertyName geometryProperty = FF.property(geom.getLocalName());
+            Geometry nativeCRSPolygon;
+            try {
+                nativeCRSPolygon = JTS.transform(polygon, CRS.findMathTransform(DefaultGeographicCRS.WGS84,
+                                reader.getCoordinateReferenceSystem()));
+                Literal polygonLiteral = FF.literal(nativeCRSPolygon);
+                // TODO: Check that geom operation. Should I do intersection or containment check?
+                 envelopeFilter = FF.intersects(geometryProperty, polygonLiteral);
+//                envelopeFilter = FF.within(geometryProperty, polygonLiteral);
+            } catch (Exception e) {
+                throw new IOException(e);
+            }
+        }
+        return envelopeFilter;
+    }
+
+    /**
+     * Set filter to match specified additional dimensions values
+     * @param dimensionSubset
+     * @param additionalDimensions
+     * @return
+     */
+    private Filter setAdditionalDimensionsFilter(Map<String, List<Object>> dimensionSubset, List<DimensionDescriptor> additionalDimensions) {
+        Filter additionalDimensionsFilter = null;
+
+        // Check whether the number of specified additional dimensions values doesn't match the number of available additional dimensions
+        if (additionalDimensions != null && dimensionSubset != null && additionalDimensions.size() != dimensionSubset.size() && dimensionSubset.size() > 0) {
+
+            List<Filter> additionalDimensionFilterList = new ArrayList<Filter>();
+            Set<String> dimensionKeys = dimensionSubset.keySet();
+            for (String dimension : dimensionKeys) {
+                // Look for the specified dimension
+                Filter dimensionFilter = createCustomDimensionFilter(dimension, dimensionSubset, additionalDimensions);
+                if (dimensionFilter != null) {
+                    additionalDimensionFilterList.add(dimensionFilter);
+                }
+            }
+            if (!additionalDimensionFilterList.isEmpty()) {
+                additionalDimensionsFilter = FF.and(additionalDimensionFilterList);
+            }
+        }
+        return additionalDimensionsFilter;
+    }
+
+    /**
+     * Create a filter matching the specified additional dimension value
+     * @param dimension
+     * @param dimensionSubset
+     * @param customDimensions
+     * @return
+     */
+    private Filter createCustomDimensionFilter(String dimension,
+            Map<String, List<Object>> dimensionSubset, List<DimensionDescriptor> customDimensions) {
+        List<Object> dimensionSelection = dimensionSubset.get(dimension);
+
+        // Only supporting slicing right now. Dealing with a single dimension value
+        Object dimensionValue = dimensionSelection.get(0);
+        for (DimensionDescriptor dimensionDescriptor : customDimensions) {
+            if (dimensionDescriptor.getName().equalsIgnoreCase(dimension)) {
+                String attribute = dimensionDescriptor.getStartAttribute();
+                return FF.equals(FF.property(attribute), FF.literal(dimensionValue));
+            }
+        }
+        return null;
     }
 
     /**
@@ -351,15 +451,13 @@ public class WCSDefaultValuesHelper {
     }
 
     private Filter rangeFilter(String start, String end, Object minValue, Object maxValue) {
-//      if(overlaps) {
-//      Filter f1 = FF.lessOrEqual(FF.property(start), FF.literal(maxValue));
-//      Filter f2 = FF.greaterOrEqual(FF.property(end), FF.literal(minValue));
-//      timeFilter = FF.and(Arrays.asList(f1, f2));
-//    }
+      Filter f1 = FF.lessOrEqual(FF.property(start), FF.literal(maxValue));
+      Filter f2 = FF.greaterOrEqual(FF.property(end), FF.literal(minValue));
+      return FF.and(Arrays.asList(f1, f2));
 
-        Filter f1 = FF.greaterOrEqual(FF.property(start), FF.literal(minValue));
-        Filter f2 = FF.lessOrEqual(FF.property(end), FF.literal(maxValue));
-        return FF.and(Arrays.asList(f1, f2));
+//        Filter f1 = FF.greaterOrEqual(FF.property(start), FF.literal(minValue));
+//        Filter f2 = FF.lessOrEqual(FF.property(end), FF.literal(maxValue));
+//        return FF.and(Arrays.asList(f1, f2));
     }
 
     /** 
@@ -372,9 +470,9 @@ public class WCSDefaultValuesHelper {
     private GridCoverageRequest setStandardReaderDefaults(GridCoverageRequest subsettingRequest) throws IOException {
         DateRange temporalSubset = subsettingRequest.getTemporalSubset();
         NumberRange<?> elevationSubset = subsettingRequest.getElevationSubset();
-        Map<String, List> dimensionSubset = subsettingRequest.getDimensionsSubset();
-        
-        // Reader is not a StructuredGridCoverage2DReader instance. Set max values as default ones.
+//        Map<String, List<Object>> dimensionSubset = subsettingRequest.getDimensionsSubset();
+
+        // Reader is not a StructuredGridCoverage2DReader instance. Set default ones with policy "time = max, elevation = min".
         if (temporalSubset == null) {
             // use "current" as the default
             Date maxTime = accessor.getMaxTime();
@@ -385,17 +483,16 @@ public class WCSDefaultValuesHelper {
 
         if (elevationSubset == null) {
             // use "current" as the default
-            Number maxElevation = accessor.getMaxElevation();
-            if (maxElevation != null) {
-                elevationSubset = new NumberRange(maxElevation.getClass(), maxElevation, maxElevation);
+            Number minElevation = accessor.getMinElevation();
+            if (minElevation != null) {
+                elevationSubset = new NumberRange(minElevation.getClass(), minElevation, minElevation);
             }
         }
-        
+
         //TODO: set dimensionSubset
         subsettingRequest.setTemporalSubset(temporalSubset);
         subsettingRequest.setElevationSubset(elevationSubset);
         return subsettingRequest;
     }
-    
 
 }

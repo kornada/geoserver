@@ -476,7 +476,7 @@ public class GetCoverage {
             Set<ParameterDescriptor<List>> dynamicParameters = reader.getDynamicParameters();
             descriptors.addAll(dynamicParameters);
 
-            Map<String, List> dimensionsSubset = request.getDimensionsSubset();
+            Map<String, List<Object>> dimensionsSubset = request.getDimensionsSubset();
             Set<String> dimensionKeys = dimensionsSubset.keySet();
             for (String key : dimensionKeys) {
                 List<Object> dimValues = dimensionsSubset.get(key);

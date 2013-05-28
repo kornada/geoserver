@@ -16,5 +16,9 @@
     <wcs:Dimension>Elevation</wcs:Dimension>
     <wcs:SlicePoint>${slicePointElevation}</wcs:SlicePoint>
   </wcs:DimensionSlice>
+  <wcs:DimensionSlice>
+    <wcs:Dimension>${Custom}</wcs:Dimension>
+    <wcs:SlicePoint>${slicePointCustom}</wcs:SlicePoint>
+  </wcs:DimensionSlice>
   <wcs:format>image/tiff</wcs:format>
 </wcs:GetCoverage>
