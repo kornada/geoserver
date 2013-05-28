@@ -159,7 +159,7 @@ public class WCSDimensionsSubsetHelper {
      * @param subsettingCRS
      * @return
      */
-    public GeneralEnvelope extractSubsettingEnvelope() {
+    private GeneralEnvelope extractSubsettingEnvelope() {
 
         //default envelope in subsettingCRS
         final CoordinateReferenceSystem sourceCRS=reader.getCoordinateReferenceSystem();
@@ -251,7 +251,7 @@ public class WCSDimensionsSubsetHelper {
             foundDimensions.add(dimension);
             
             // now decide what to do
-            final String CRS= dim.getCRS();// TODO HOW DO WE USE THIS???
+//            final String CRS= dim.getCRS();// TODO HOW DO WE USE THIS???
             if(dim instanceof DimensionTrimType){
 
                 // TRIMMING
@@ -370,7 +370,7 @@ public class WCSDimensionsSubsetHelper {
      * @return
      * @throws IOException 
      */
-    public DateRange extractTemporalSubset() throws IOException {
+    private DateRange extractTemporalSubset() throws IOException {
         DateRange timeSubset = null;
         if (timeDimension != null) {
             for (DimensionSubsetType dim : request.getDimensionSubset()) {
@@ -563,7 +563,7 @@ public class WCSDimensionsSubsetHelper {
      * @return
      * @throws IOException 
      */
-    public NumberRange extractElevationSubset() throws IOException {
+    private NumberRange extractElevationSubset() throws IOException {
         NumberRange elevationSubset = null;
         if (elevationDimension != null) {
             for (DimensionSubsetType dim : request.getDimensionSubset()) {
@@ -700,7 +700,7 @@ public class WCSDimensionsSubsetHelper {
      * @return
      * @throws IOException 
      */
-    public Map<String, List<Object>> extractDimensionsSubset() throws IOException {
+    private Map<String, List<Object>> extractDimensionsSubset() throws IOException {
         Map<String, List<Object>> dimensionSubset = new HashMap<String, List<Object>>();
 
         if (dimensions != null && !dimensions.isEmpty()) {
@@ -758,18 +758,19 @@ public class WCSDimensionsSubsetHelper {
     }
 
     /**
-     * Set the slice value as proper object 
+     * Set the slice value as proper object (by checking whether the domainDatatype metadata exists or by try multiple parsing until one is
+     * successfull)
      * 
-     * @param dimension
+     * @param dimensionName the name of the dimension to be set
      * @param slicing
      * @param selectedValues
      * @throws IOException
      */
-    private void setSubsetValue(String dimension, DimensionSliceType slicing, List<Object> selectedValues) throws IOException {
+    private void setSubsetValue(String dimensionName, DimensionSliceType slicing, List<Object> selectedValues) throws IOException {
         final String slicePointS = slicing.getSlicePoint();
         boolean sliceSet = false;
 
-        String domainDatatype = accessor.getDomainDatatype(dimension);
+        String domainDatatype = accessor.getDomainDatatype(dimensionName);
         if (domainDatatype != null) {
             setValues(slicePointS, selectedValues, domainDatatype);
         } else {

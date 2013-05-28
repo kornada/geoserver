@@ -153,6 +153,9 @@ public class WCSDefaultValuesHelper {
             sortBy(query, timeDimension, elevationDimension);
             query.setFilter(finalFilter);
 
+            // Returning a single feature matching the filtering
+            query.setMaxFeatures(1);
+
             // Get granules from query
             SimpleFeatureCollection granulesCollection = source.getGranules(query);
             SimpleFeatureIterator features = granulesCollection.features();
@@ -247,9 +250,10 @@ public class WCSDefaultValuesHelper {
     /**
      * Current policy is to use the max value as default for time and min value as default for elevation.
      * 
-     * @param query
+     * @param query the originating query
      * @param timeDimension
      * @param elevationDimension
+     * TODO: Consider also sorting on custom dimensions
      */
     private void sortBy(Query query, DimensionDescriptor timeDimension, DimensionDescriptor elevationDimension) {
         final List<SortBy> clauses = new ArrayList<SortBy>();
@@ -474,7 +478,7 @@ public class WCSDefaultValuesHelper {
 
         // Reader is not a StructuredGridCoverage2DReader instance. Set default ones with policy "time = max, elevation = min".
         if (temporalSubset == null) {
-            // use "current" as the default
+            // use "max" as the default
             Date maxTime = accessor.getMaxTime();
             if (maxTime != null) {
                 temporalSubset = new DateRange(maxTime, maxTime);
@@ -482,7 +486,7 @@ public class WCSDefaultValuesHelper {
         }
 
         if (elevationSubset == null) {
-            // use "current" as the default
+            // use "min" as the default
             Number minElevation = accessor.getMinElevation();
             if (minElevation != null) {
                 elevationSubset = new NumberRange(minElevation.getClass(), minElevation, minElevation);

@@ -9,13 +9,10 @@ import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -25,9 +22,6 @@ import javax.media.jai.InterpolationNearest;
 import javax.media.jai.JAI;
 import javax.media.jai.WarpAffine;
 
-import net.opengis.wcs20.DimensionSliceType;
-import net.opengis.wcs20.DimensionSubsetType;
-import net.opengis.wcs20.DimensionTrimType;
 import net.opengis.wcs20.ExtensionItemType;
 import net.opengis.wcs20.ExtensionType;
 import net.opengis.wcs20.GetCoverageType;
@@ -43,17 +37,13 @@ import net.opengis.wcs20.ScalingType;
 import org.eclipse.emf.common.util.EList;
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CoverageInfo;
-import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.LayerInfo;
-import org.geoserver.catalog.ResourceInfo;
-import org.geoserver.catalog.util.ReaderDimensionsAccessor;
 import org.geoserver.data.util.CoverageUtils;
 import org.geoserver.platform.ServiceException;
 import org.geoserver.wcs.CoverageCleanerCallback;
 import org.geoserver.wcs.WCSInfo;
 import org.geoserver.wcs2_0.exception.WCS20Exception;
 import org.geoserver.wcs2_0.exception.WCS20Exception.WCS20ExceptionCode;
-import org.geoserver.wcs2_0.response.WCSDimensionsHelper;
 import org.geoserver.wcs2_0.response.WCSDimensionsSubsetHelper;
 import org.geoserver.wcs2_0.util.EnvelopeAxesLabelsMapper;
 import org.geoserver.wcs2_0.util.NCNameResourceCodec;
@@ -73,12 +63,9 @@ import org.geotools.referencing.CRS;
 import org.geotools.referencing.ReferencingFactoryFinder;
 import org.geotools.referencing.operation.transform.AffineTransform2D;
 import org.geotools.resources.coverage.CoverageUtilities;
-import org.geotools.util.DateRange;
 import org.geotools.util.DefaultProgressListener;
-import org.geotools.util.NumberRange;
 import org.geotools.util.Utilities;
 import org.geotools.util.logging.Logging;
-import org.geotools.xml.impl.DatatypeConverterImpl;
 import org.opengis.coverage.SampleDimension;
 import org.opengis.coverage.grid.GridCoverage;
 import org.opengis.coverage.processing.Operation;
@@ -91,8 +78,6 @@ import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.crs.CRSAuthorityFactory;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.datum.PixelInCell;
-import org.opengis.referencing.operation.MathTransform;
-import org.opengis.referencing.operation.TransformException;
 import org.vfny.geoserver.util.WCSUtils;
 
 /**
@@ -121,8 +106,6 @@ public class GetCoverage {
     private CRSAuthorityFactory latLonCRSFactory;
     
     public final static String SRS_STARTER="http://www.opengis.net/def/crs/EPSG/0/";
-
-    private final static DatatypeConverterImpl XML_CONVERTER = DatatypeConverterImpl.getInstance();
 
     public GetCoverage(WCSInfo serviceInfo, Catalog catalog, EnvelopeAxesLabelsMapper envelopeDimensionsMapper) {
         this.wcs = serviceInfo;
