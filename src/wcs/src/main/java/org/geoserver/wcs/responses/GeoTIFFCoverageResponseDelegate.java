@@ -27,6 +27,7 @@ import org.geotools.gce.geotiff.GeoTiffFormat;
 import org.geotools.gce.geotiff.GeoTiffWriteParams;
 import org.geotools.gce.geotiff.GeoTiffWriter;
 import org.geotools.util.Utilities;
+import org.opengis.coverage.grid.GridEnvelope;
 import org.opengis.parameter.GeneralParameterValue;
 import org.opengis.parameter.ParameterValueGroup;
 import org.vfny.geoserver.wcs.WcsException;
@@ -179,6 +180,13 @@ public class GeoTIFFCoverageResponseDelegate extends BaseCoverageResponseDelegat
 
         // start with default dimension, since tileW and tileH are optional
         final Dimension tileDimensions= new Dimension(JAI.getDefaultTileSize());
+        GridEnvelope gr = sourceCoverage.getGridGeometry().getGridRange();
+        if(gr.getSpan(0) < tileDimensions.width) {
+            tileDimensions.width = gr.getSpan(0);
+        }
+        if(gr.getSpan(1) < tileDimensions.height) {
+            tileDimensions.height = gr.getSpan(1);
+        }
         
         //
         // tiling
@@ -242,17 +250,7 @@ public class GeoTIFFCoverageResponseDelegate extends BaseCoverageResponseDelegat
                 }                
                                      
             }
-        } else {
-            // default back to image size for performance
-            final RenderedImage image = sourceCoverage.getRenderedImage();
-            final SampleModel sm = image.getSampleModel();
-            final int tileW=sm.getWidth();
-            final int tileH=sm.getHeight();
-            if(tileW<image.getWidth()){
-                tileDimensions.width=tileW;
-                tileDimensions.height=tileH;
-            }
-        }        
+        }    
 
         // set tile dimensions
         wp.setTilingMode(GeoToolsWriteParams.MODE_EXPLICIT);

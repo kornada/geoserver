@@ -9,6 +9,7 @@ import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +52,7 @@ import org.geoserver.wcs2_0.util.RequestUtils;
 import org.geotools.coverage.CoverageFactoryFinder;
 import org.geotools.coverage.GridSampleDimension;
 import org.geotools.coverage.grid.GridCoverage2D;
+import org.geotools.coverage.grid.GridCoverageFactory;
 import org.geotools.coverage.grid.GridEnvelope2D;
 import org.geotools.coverage.grid.GridGeometry2D;
 import org.geotools.coverage.grid.io.AbstractGridFormat;
@@ -212,6 +214,13 @@ public class GetCoverage {
             // Output limits checks
             // We need to enforce them once again as it might be that no scaling or rangesubsetting is requested
             WCSUtils.checkOutputLimits(wcs, coverage.getGridGeometry().getGridRange2D(), coverage.getRenderedImage().getSampleModel());
+            
+//            // add the originator -- FOR THE MOMENT DON'T, NOT CLEAR WHAT EO METADATA WE SHOULD ADD TO THE OUTPUT
+//            Map<String, Object> properties = new HashMap<String, Object>(coverage.getProperties());
+//            properties.put(WebCoverageService20.ORIGINATING_COVERAGE_INFO, cinfo);
+//            GridCoverage2D [] sources = (GridCoverage2D[]) coverage.getSources().toArray(new GridCoverage2D[coverage.getSources().size()]);
+//            coverage = new GridCoverageFactory().create(coverage.getName().toString(), coverage.getRenderedImage(), 
+//                    coverage.getGridGeometry(), coverage.getSampleDimensions(), sources, properties);
         } catch(ServiceException e) {
             throw e;
         } catch(Exception e) {

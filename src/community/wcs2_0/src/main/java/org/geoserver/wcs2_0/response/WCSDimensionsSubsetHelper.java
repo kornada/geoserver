@@ -953,6 +953,7 @@ public class WCSDimensionsSubsetHelper {
         subsettingRequest.setElevationSubset(elevationSubset);
         subsettingRequest.setTemporalSubset(temporalSubset);
         subsettingRequest.setDimensionsSubset(dimensionsSubset);
+        subsettingRequest.setFilter(request.getFilter());
 
         // Handle default values and update subsetting values if needed
         String coverageName =  ci.getNativeCoverageName() != null ? ci.getNativeCoverageName() : reader.getGridCoverageNames()[0];

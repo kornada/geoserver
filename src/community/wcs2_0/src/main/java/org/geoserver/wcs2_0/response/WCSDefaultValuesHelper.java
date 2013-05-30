@@ -113,6 +113,7 @@ public class WCSDefaultValuesHelper {
         NumberRange<?> elevationSubset = subsettingRequest.getElevationSubset();
         Map<String, List<Object>> dimensionsSubset = subsettingRequest.getDimensionsSubset();
         GeneralEnvelope envelopeSubset = subsettingRequest.getSpatialSubset();
+        Filter originalFilter = subsettingRequest.getFilter();
 
         final int specifiedDimensionsSubset = dimensionsSubset != null ? dimensionsSubset.size() : 0;
 
@@ -149,7 +150,7 @@ public class WCSDefaultValuesHelper {
             GranuleSource source = structuredReader.getGranules(coverageName, true);
 
             // Set filtering query matching the specified subsets. 
-            Filter finalFilter = setFilters(temporalSubset, elevationSubset, envelopeSubset, dimensionsSubset, structuredReader, timeDimension, elevationDimension, customDimensions);
+            Filter finalFilter = setFilters(originalFilter, temporalSubset, elevationSubset, envelopeSubset, dimensionsSubset, structuredReader, timeDimension, elevationDimension, customDimensions);
             Query query = new Query();
 
             // Set sorting order (default Policy is using Max... therefore Descending order)
@@ -276,6 +277,7 @@ public class WCSDefaultValuesHelper {
 
     /** 
      * Setup filter query on top of specified subsets values to return only granules satisfying the specified conditions.
+     * @param originalFilter 
      * @param temporalSubset
      * @param elevationSubset
      * @param envelopeSubset 
@@ -287,12 +289,12 @@ public class WCSDefaultValuesHelper {
      * @return
      * @throws IOException 
      */
-    private Filter setFilters(DateRange temporalSubset, NumberRange<?> elevationSubset, GeneralEnvelope envelopeSubset, 
+    private Filter setFilters(Filter originalFilter, DateRange temporalSubset, NumberRange<?> elevationSubset, GeneralEnvelope envelopeSubset, 
             Map<String, List<Object>> dimensionSubset, StructuredGridCoverage2DReader reader, DimensionDescriptor timeDimension, 
             DimensionDescriptor elevationDimension, List<DimensionDescriptor> additionalDimensions) 
                     throws IOException {
         List<Filter> filters = new ArrayList<Filter>();
-
+        
         // Setting temporal filter
         Filter timeFilter = temporalSubset == null && timeDimension == null ? null
                 : setTimeFilter(temporalSubset, timeDimension.getStartAttribute(),
@@ -311,6 +313,9 @@ public class WCSDefaultValuesHelper {
         Filter additionalDimensionsFilter = setAdditionalDimensionsFilter(dimensionSubset, additionalDimensions);
 
         // Updating filters 
+        if(originalFilter != null) {
+            filters.add(originalFilter);
+        }
         if (elevationFilter != null) {
             filters.add(elevationFilter);
         }

@@ -5,6 +5,7 @@
 package org.geoserver.wcs2_0.response;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.HashMap;
@@ -14,12 +15,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.MetadataMap;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.util.ReaderDimensionsAccessor;
 import org.geoserver.util.ISO8601Formatter;
 import org.geoserver.wcs2_0.exception.WCS20Exception;
+import org.geoserver.wcs2_0.util.NCNameResourceCodec;
 import org.geotools.coverage.grid.io.DimensionDescriptor;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
@@ -72,19 +75,47 @@ public class WCSDimensionsHelper {
     long timeResolutionValue;
 
     String coverageId;
-
+    
     /**
-     * Base constructor which only deals with timeDimension. It is used by WCS-EO classes which deals with up to timeDimensions 
+     * Base constructor which only deals with timeDimension. It is used by WCS-EO classes which
+     * deals with up to timeDimensions
      * 
      * @param timeDimension
      * @param reader
      * @param coverageId
      * @throws IOException
      */
-    public WCSDimensionsHelper(final DimensionInfo timeDimension, final GridCoverage2DReader reader, final String coverageId) throws IOException {
-        this(new HashMap<String, DimensionInfo>() {{
-            put(ResourceInfo.TIME, timeDimension);
-     }}, reader, coverageId);
+    public WCSDimensionsHelper(CoverageInfo ci) throws IOException {
+        this.coverageId = NCNameResourceCodec.encode(ci);
+        this.accessor = new ReaderDimensionsAccessor((GridCoverage2DReader) ci.getGridCoverageReader(null, null));
+
+        Map<String, DimensionInfo> dimensions = new HashMap<String, DimensionInfo>();
+        for (Map.Entry<String, Serializable> entry : ci.getMetadata().entrySet()) {
+            if(entry.getValue() instanceof DimensionInfo) {
+                dimensions.put(entry.getKey(), (DimensionInfo) entry.getValue());
+            }
+        }
+        if (!dimensions.isEmpty()) {
+            initDimensions(dimensions);
+        }
+    }
+
+    /**
+     * Base constructor which only deals with timeDimension. It is used by WCS-EO classes which
+     * deals with up to timeDimensions
+     * 
+     * @param timeDimension
+     * @param reader
+     * @param coverageId
+     * @throws IOException
+     */
+    public WCSDimensionsHelper(final DimensionInfo timeDimension,
+            final GridCoverage2DReader reader, final String coverageId) throws IOException {
+        this(new HashMap<String, DimensionInfo>() {
+            {
+                put(ResourceInfo.TIME, timeDimension);
+            }
+        }, reader, coverageId);
     }
 
     public WCSDimensionsHelper(final Map<String, DimensionInfo> dimensions, final GridCoverage2DReader reader, final String coverageId) throws IOException {

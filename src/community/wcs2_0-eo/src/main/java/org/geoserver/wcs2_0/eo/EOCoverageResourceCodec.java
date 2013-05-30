@@ -154,4 +154,9 @@ public class EOCoverageResourceCodec {
         
         return FF.id(Collections.singleton(FF.featureId(splitted[1])));
     }
+
+    public String getCoverageName(CoverageInfo ci) throws IOException {
+        return ci.getNativeCoverageName() != null ? ci.getNativeCoverageName()
+                : ci.getGridCoverageReader(null, null).getGridCoverageNames()[0];
+    }
 }

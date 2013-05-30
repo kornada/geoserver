@@ -310,8 +310,7 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
                 try {
                     StructuredGridCoverage2DReader reader = (StructuredGridCoverage2DReader) ci
                             .getGridCoverageReader(null, null);
-                    String name = ci.getNativeCoverageName() != null ? ci.getNativeCoverageName()
-                            : reader.getGridCoverageNames()[0];
+                    String name = codec.getCoverageName(ci);
                     source = reader.getGranules(name, true);
 
                     Query q = buildQueryFromDimensionTrims(dcs, reader, name);
