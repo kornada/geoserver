@@ -20,7 +20,7 @@ public class GetCapabilitiesTest extends WCSEOTestSupport {
         assertEquals("20", xpath.evaluate("//ows:Constraint[@name='CountDefault']/ows:DefaultValue", dom));
         
         // dataset series checks
-        assertEquals("3", xpath.evaluate("count(//wcs:Extension/wcseo:DatasetSeriesSummary)", dom));
+        assertEquals("4", xpath.evaluate("count(//wcs:Extension/wcseo:DatasetSeriesSummary)", dom));
         // check time ranges
         assertEquals("1", xpath.evaluate("count(//wcs:Extension/wcseo:DatasetSeriesSummary[wcseo:DatasetSeriesId='sf__timeranges_dss'])", dom));
         assertEquals("1", xpath.evaluate("count(//wcs:Extension/wcseo:DatasetSeriesSummary[wcseo:DatasetSeriesId='sf__timeranges_dss']/ows:WGS84BoundingBox)", dom));

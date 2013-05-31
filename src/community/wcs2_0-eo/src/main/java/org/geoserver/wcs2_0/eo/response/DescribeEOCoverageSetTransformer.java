@@ -5,10 +5,14 @@
 package org.geoserver.wcs2_0.eo.response;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -268,7 +272,7 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
                         SimpleFeature f = features.next();
                         String granuleId = codec.getGranuleId(cg.coverage, f.getID());
                         dcTranslator.handleCoverageDescription(granuleId, new GranuleCoverageInfo(
-                                cg.coverage, f, cg.timeDimensionDescriptor));
+                                cg.coverage, f, cg.dimensionDescriptors));
                     }
                 } finally {
                     if (features != null) {
@@ -318,8 +322,8 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
 
                     // only report in output coverages that have at least one matched granule
                     if(!collection.isEmpty()) {
-                        DimensionDescriptor time = WCSDimensionsHelper.getDimensionDescriptor(reader, name, "TIME");
-                        CoverageGranules granules = new CoverageGranules(ci, name, reader, collection, time);
+                        List<DimensionDescriptor> descriptors = getActiveDimensionDescriptor(ci, reader, name);
+                        CoverageGranules granules = new CoverageGranules(ci, name, reader, collection, descriptors);
                         results.add(granules);
                     }
                 } catch (IOException e) {
@@ -336,6 +340,34 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
                 }
             }
             return results;
+        }
+
+        private List<DimensionDescriptor> getActiveDimensionDescriptor(CoverageInfo ci,
+                StructuredGridCoverage2DReader reader, String name) throws IOException {
+            // map the source descriptors for easy retrieval
+            Map<String, DimensionDescriptor> sourceDescriptors = new HashMap<String, DimensionDescriptor>();
+            for (DimensionDescriptor dimensionDescriptor : reader.getDimensionDescriptors(name)) {
+                sourceDescriptors.put(dimensionDescriptor.getName().toUpperCase(), dimensionDescriptor);
+            }
+            // select only those that have been activated vai the GeoServer GUI
+            List<DimensionDescriptor> enabledDescriptors = new ArrayList<DimensionDescriptor>();
+            for(Entry<String, Serializable> entry : ci.getMetadata().entrySet()) {
+                if(entry.getValue() instanceof DimensionInfo) {
+                    DimensionInfo di = (DimensionInfo) entry.getValue();
+                    if(di.isEnabled()) {
+                        String dimensionName = entry.getKey();
+                        if(dimensionName.startsWith(ResourceInfo.CUSTOM_DIMENSION_PREFIX)) {
+                            dimensionName = dimensionName.substring(ResourceInfo.CUSTOM_DIMENSION_PREFIX.length());
+                        }
+                        DimensionDescriptor selected = sourceDescriptors.get(dimensionName.toUpperCase());
+                        if(selected != null) {
+                            enabledDescriptors.add(selected);
+                        }
+                    }
+                }
+            }
+            
+            return enabledDescriptors;
         }
 
         private Query buildQueryFromDimensionTrims(DescribeEOCoverageSetType dcs,
@@ -520,15 +552,15 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
 
         private String name;
 
-        private DimensionDescriptor timeDimensionDescriptor;
+        private List<DimensionDescriptor> dimensionDescriptors;
 
         public CoverageGranules(CoverageInfo coverage, String name, StructuredGridCoverage2DReader reader,
-                SimpleFeatureCollection granules, DimensionDescriptor timeDimensionDescriptor) {
+                SimpleFeatureCollection granules, List<DimensionDescriptor> dimensionDescriptors) {
             this.coverage = coverage;
             this.name = name;
             this.reader = reader;
             this.granules = granules;
-            this.timeDimensionDescriptor = timeDimensionDescriptor;
+            this.dimensionDescriptors = dimensionDescriptors;
         }
 
     }

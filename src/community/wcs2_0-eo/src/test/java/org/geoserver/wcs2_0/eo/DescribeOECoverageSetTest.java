@@ -110,22 +110,50 @@ public class DescribeOECoverageSetTest extends WCSEOTestSupport {
     @Test
     public void testSpatioTemporalDataset() throws Exception {
         Document dom = getAsDOM("wcs?request=DescribeEOCoverageSet&version=2.0.1&service=WCS&eoid=sf__spatio-temporal_dss");
-//         print(dom);
+        // print(dom);
         
         // this one has 16 granules
         assertEquals("16", xpath.evaluate("count(//wcs:CoverageDescriptions/wcs:CoverageDescription)", dom));
         
-        // four of which start at one of these corners (2 times, 2 elevations) (check the bbox is actually the one of the granule, that is)
+        // four of which start at one of these corners (2 times) (check the bbox is actually the one of the granule, that is)
         String envelopeBase = "//wcs:CoverageDescriptions/wcs:CoverageDescription/gml:boundedBy/gml:EnvelopeWithTimePeriod";
-        assertEquals("4", xpath.evaluate("count(" + envelopeBase + "[gml:lowerCorner='42.000641593750004 0.23722100000000002 0.0'])", dom));
-        assertEquals("4", xpath.evaluate("count(" + envelopeBase + "[gml:lowerCorner='42.000641593750004 9.424764334960939 0.0'])", dom));
-        assertEquals("4", xpath.evaluate("count(" + envelopeBase + "[gml:lowerCorner='40.56208080273438 9.424764334960939 0.0'])", dom));
-        assertEquals("4", xpath.evaluate("count(" + envelopeBase + "[gml:lowerCorner='40.56208080273438 0.23722100000000002 0.0'])", dom));
+        assertEquals("2", xpath.evaluate("count(" + envelopeBase + "[gml:lowerCorner='42.000641593750004 0.23722100000000002 0.0'])", dom));
+        assertEquals("2", xpath.evaluate("count(" + envelopeBase + "[gml:lowerCorner='42.000641593750004 9.424764334960939 0.0'])", dom));
+        assertEquals("2", xpath.evaluate("count(" + envelopeBase + "[gml:lowerCorner='40.56208080273438 9.424764334960939 0.0'])", dom));
+        assertEquals("2", xpath.evaluate("count(" + envelopeBase + "[gml:lowerCorner='40.56208080273438 0.23722100000000002 0.0'])", dom));
         
         // check also by time, they should be 8 and 8
         assertEquals("8", xpath.evaluate("count(" + envelopeBase + "[gml:beginPosition='2008-10-31T00:00:00.000Z' and gml:endPosition='2008-10-31T00:00:00.000Z'])", dom));
         assertEquals("8", xpath.evaluate("count(" + envelopeBase + "[gml:beginPosition='2008-11-01T00:00:00.000Z' and gml:endPosition='2008-11-01T00:00:00.000Z'])", dom));
         
+    }
+    
+    @Test
+    public void testMultiDimensional() throws Exception {
+        Document dom = getAsDOM("wcs?request=DescribeEOCoverageSet&version=2.0.1&service=WCS&eoid=sf__multidim_dss");
+        // print(dom);
+        
+        // this one has 12 granules
+        assertEquals("12", xpath.evaluate("count(//wcs:CoverageDescriptions/wcs:CoverageDescription)", dom));
+        
+        // check a specific granule
+        String base = "//wcs:CoverageDescriptions/wcs:CoverageDescription[@gml:id='sf__multidim_granule_multidim.1']";
+        // ... the bbox is the expected one (it's lat/lon/elev/time
+        assertEquals("40.562080748421806 0.23722068851276978 20.0", xpath.evaluate(base + "/gml:boundedBy/gml:EnvelopeWithTimePeriod/gml:lowerCorner", dom));        
+        assertEquals("44.55808294568743 14.592757149389236 99.0", xpath.evaluate(base + "/gml:boundedBy/gml:EnvelopeWithTimePeriod/gml:upperCorner", dom));
+        assertEquals("2008-10-31T00:00:00.000Z", xpath.evaluate(base + "/gml:boundedBy/gml:EnvelopeWithTimePeriod/gml:beginPosition", dom));
+        assertEquals("2008-11-03T00:00:00.000Z", xpath.evaluate(base + "/gml:boundedBy/gml:EnvelopeWithTimePeriod/gml:endPosition", dom));
+        // check the custom dimensions support
+        String extBase = base + "/gmlcov:metadata/gmlcov:Extension";
+        assertEquals("2008-10-31T00:00:00.000Z", xpath.evaluate(extBase + "/wcsgs:TimeDomain/gml:TimePeriod/gml:beginPosition", dom));
+        assertEquals("2008-11-03T00:00:00.000Z", xpath.evaluate(extBase + "/wcsgs:TimeDomain/gml:TimePeriod/gml:endPosition", dom));
+        assertEquals("20.0", xpath.evaluate(extBase + "/wcsgs:ElevationDomain/wcsgs:Range/wcsgs:start", dom));
+        assertEquals("99.0", xpath.evaluate(extBase + "/wcsgs:ElevationDomain/wcsgs:Range/wcsgs:end", dom));
+        assertEquals("12.0", xpath.evaluate(extBase + "/wcsgs:DimensionDomain[@name='WAVELENGTH']/wcsgs:Range/wcsgs:start", dom));
+        assertEquals("24.0", xpath.evaluate(extBase + "/wcsgs:DimensionDomain[@name='WAVELENGTH']/wcsgs:Range/wcsgs:end", dom));
+        // check the EO metadata times too
+        assertEquals("2008-10-31T00:00:00.000Z", xpath.evaluate(extBase + "/wcseo:EOMetadata/eop:EarthObservation/om:phenomenonTime/gml:TimePeriod/gml:beginPosition", dom));
+        assertEquals("2008-11-03T00:00:00.000Z", xpath.evaluate(extBase + "/wcseo:EOMetadata/eop:EarthObservation/om:phenomenonTime/gml:TimePeriod/gml:endPosition", dom));
     }
     
     @Test

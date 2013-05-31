@@ -7,7 +7,9 @@ package org.geoserver.wcs2_0.eo.response;
 import java.io.File;
 import java.io.IOException;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.media.jai.ImageLayout;
@@ -21,7 +23,6 @@ import org.geotools.coverage.grid.io.HarvestedFile;
 import org.geotools.coverage.grid.io.OverviewPolicy;
 import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
 import org.geotools.factory.Hints;
-import org.geotools.feature.FeatureIndex;
 import org.geotools.geometry.GeneralEnvelope;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.opengis.coverage.grid.Format;
@@ -48,24 +49,19 @@ public class SingleGranuleGridCoverageReader implements StructuredGridCoverage2D
 
     private SimpleFeature feature;
 
-    boolean interval;
-    String featureMinTime;
-    String featureMaxTime;
-
     GeneralEnvelope granuleEnvelope;
 
     ISO8601Formatter formatter = new ISO8601Formatter();
 
+    Map<String, DimensionDescriptor> dimensionDescriptors;
+
     public SingleGranuleGridCoverageReader(StructuredGridCoverage2DReader reader,
-            SimpleFeature feature, DimensionDescriptor timeDescriptor) {
+            SimpleFeature feature, List<DimensionDescriptor> dimensionDescriptors) {
         this.reader = reader;
         this.feature = feature;
-        this.featureMinTime = formatter.format(feature.getAttribute(timeDescriptor.getStartAttribute()));
-        interval = timeDescriptor.getEndAttribute() != null;
-        if(interval) {
-            this.featureMaxTime = formatter.format(feature.getAttribute(timeDescriptor.getEndAttribute()));
-        } else {
-            this.featureMaxTime = featureMinTime;
+        this.dimensionDescriptors = new HashMap<String, DimensionDescriptor>();
+        for (DimensionDescriptor descriptor : dimensionDescriptors) {
+            this.dimensionDescriptors.put(descriptor.getName().toUpperCase(), descriptor);
         }
         Geometry featureGeometry = lookupFeatureGeometry();
         ReferencedEnvelope re = new ReferencedEnvelope(featureGeometry.getEnvelopeInternal(),
@@ -115,19 +111,42 @@ public class SingleGranuleGridCoverageReader implements StructuredGridCoverage2D
     }
 
     public String getMetadataValue(String name) throws IOException {
-        if (GridCoverage2DReader.TIME_DOMAIN_MINIMUM.equals(name)) {
-            return featureMinTime;
-        }
-        if (GridCoverage2DReader.TIME_DOMAIN_MAXIMUM.equals(name)) {
-            return featureMaxTime;
-        }
-        if (GridCoverage2DReader.TIME_DOMAIN.equals(name)) {
-            if(interval) {
-                return featureMinTime + "/" + featureMaxTime;
-            } else {
-                return featureMinTime;
+        if(name.endsWith("_DOMAIN_MINIMUM") || name.endsWith("_DOMAIN_MAXIMUM") || name.endsWith("_DOMAIN")) {
+            String dimensionName = name.substring(0, name.indexOf("_DOMAIN"));
+            DimensionDescriptor descriptor = dimensionDescriptors.get(dimensionName);
+            if(descriptor != null) {
+                Object start = feature.getAttribute(descriptor.getStartAttribute());
+                Object end = null;
+                if(descriptor.getEndAttribute() != null) {
+                    end = feature.getAttribute(descriptor.getEndAttribute());
+                }
+                if(dimensionName.equalsIgnoreCase("TIME")) {
+                    start = formatter.format((Date) start);
+                    if(end != null) {
+                        end = formatter.format((Date) end);
+                    }
+                }
+                
+                if (name.endsWith("_DOMAIN_MINIMUM")) {
+                    return String.valueOf(start);
+                }
+                if (name.endsWith("_DOMAIN_MAXIMUM")) {
+                    if(end != null) {
+                        return String.valueOf(end);
+                    } else {
+                        return String.valueOf(start);
+                    }
+                }
+                if (name.endsWith("_DOMAIN")) {
+                    if(end != null) {
+                        return start + "/" + end;
+                    } else {
+                        return String.valueOf(start);
+                    }
+                }
             }
         }
+
         return reader.getMetadataValue(name);
     }
 

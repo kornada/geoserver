@@ -51,6 +51,8 @@ public abstract class WCSEOTestSupport extends GeoServerSystemTestSupport {
     protected static QName WATTEMP = new QName(MockData.SF_URI, "watertemp", MockData.SF_PREFIX);
     
     protected static QName SPATIO_TEMPORAL = new QName(MockData.SF_URI, "spatio-temporal", MockData.SF_PREFIX);
+    
+    protected static QName MULTIDIM = new QName(MockData.SF_URI, "multidim", MockData.SF_PREFIX);
 
     
     protected static XpathEngine xpath;
@@ -95,6 +97,8 @@ public abstract class WCSEOTestSupport extends GeoServerSystemTestSupport {
         testData.addRasterLayer(WATTEMP, "watertemp.zip", null, null, SystemTestData.class,
                 getCatalog());
         testData.addRasterLayer(SPATIO_TEMPORAL, "spatio-temporal.zip", null, null, SystemTestData.class,
+                getCatalog());
+        testData.addRasterLayer(MULTIDIM, "multidim.zip", null, null, SystemTestData.class,
                 getCatalog());
 
         // init xmlunit
@@ -217,6 +221,10 @@ public abstract class WCSEOTestSupport extends GeoServerSystemTestSupport {
         String spatioTemporal = getLayerId(SPATIO_TEMPORAL);
         enableEODataset(spatioTemporal);
         setupRasterDimension(spatioTemporal, ResourceInfo.ELEVATION, DimensionPresentation.LIST, null);
+        String multidim = getLayerId(MULTIDIM);
+        enableEODataset(multidim);
+        setupRasterDimension(multidim, ResourceInfo.ELEVATION, DimensionPresentation.LIST, null);
+        setupRasterDimension(multidim, ResourceInfo.CUSTOM_DIMENSION_PREFIX + "WAVELENGTH", DimensionPresentation.LIST, null);
     }
 
 
