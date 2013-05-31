@@ -182,12 +182,12 @@ public class GeoTIFFCoverageResponseDelegate extends BaseCoverageResponseDelegat
         final Dimension tileDimensions= new Dimension(JAI.getDefaultTileSize());
         GridEnvelope gr = sourceCoverage.getGridGeometry().getGridRange();
         if(gr.getSpan(0) < tileDimensions.width) {
-            tileDimensions.width = gr.getSpan(0);
+            tileDimensions.width = refineTileSize(gr.getSpan(0));
         }
         if(gr.getSpan(1) < tileDimensions.height) {
-            tileDimensions.height = gr.getSpan(1);
+            tileDimensions.height = refineTileSize(gr.getSpan(1));
         }
-        
+
         //
         // tiling
         //
@@ -236,25 +236,40 @@ public class GeoTIFFCoverageResponseDelegate extends BaseCoverageResponseDelegat
                                 throw new OWS20Exception(
                                         "Provided tile height is invalid",
                                         ows20Code(WcsExceptionCode.TilingInvalid),
-                                        Integer.toString(tileH));                            
-                            } 
+                                        Integer.toString(tileH));
+                            }
                         }catch (Exception e) {
                             // tile height not supported
                             throw new OWS20Exception(
                                     "Provided tile height is invalid",
                                     ows20Code(WcsExceptionCode.TilingInvalid),
-                                    tileH_);    
+                                    tileH_);
                         }
                     }
-                    
-                }                
-                                     
+                }
             }
-        }    
+        }
 
         // set tile dimensions
         wp.setTilingMode(GeoToolsWriteParams.MODE_EXPLICIT);
         wp.setTiling(tileDimensions.width, tileDimensions.height); 
+    }
+
+    /**
+     * OGC 12-101 (GeoTIFF Coverage Encoding Extension) requires that tile width and tile height are multiple of 16.
+     * This method will round the tile size to a multiple of 16 when needed 
+     * 
+     * @param inputSize
+     * @return
+     */
+    private int refineTileSize(final int inputSize) {
+        int size = inputSize;
+        if (size % 16 != 0) {
+            int numTiles = (int) Math.ceil(size / 16d);
+            size  = numTiles * 16;
+        }
+
+        return size;
     }
 
     /**
