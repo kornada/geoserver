@@ -2,6 +2,9 @@ package org.geoserver.wcs2_0.eo;
 
 import static org.junit.Assert.*;
 
+import java.io.File;
+
+import org.apache.commons.io.FileUtils;
 import org.geoserver.wcs.WCSInfo;
 import org.junit.Test;
 import org.w3c.dom.Document;
@@ -252,7 +255,7 @@ public class DescribeOECoverageSetTest extends WCSEOTestSupport {
         // contains a bunch
         dom = getAsDOM("wcs?request=DescribeEOCoverageSet&version=2.0.1&service=WCS&eoid=sf__timeranges_dss" +
                 "&subset=phenomenonTime(\"2008-10-30T00:00:00.000Z\",\"2008-11-03T00:00:00.000Z\")&containment=contains");
-        print(dom);
+        // print(dom);
         assertEquals("4", xpath.evaluate("count(//wcs:CoverageDescriptions/wcs:CoverageDescription)", dom));
         assertEquals("1", xpath.evaluate("count(//wcseo:DatasetSeriesDescriptions)", dom));
     }
@@ -262,6 +265,15 @@ public class DescribeOECoverageSetTest extends WCSEOTestSupport {
         // 
         Document dom = getAsDOM("wcs?request=DescribeEOCoverageSet&version=2.0.1&service=WCS&eoid=sf__spatio-temporal_dss" +
         		"&subset=Long(1,5)&subset=Lat(40,41)&subset=phenomenonTime(\"2008-10-31T00:00:00.000Z\",\"2008-10-31T23:59:00.000Z\")");
+        // print(dom);
+        assertEquals("2", xpath.evaluate("count(//wcs:CoverageDescriptions/wcs:CoverageDescription)", dom));
+    }
+    
+    @Test
+    public void testMixedTrimPost() throws Exception {
+        final File xml= new File("./src/test/resources/describeEOCoverageSetTrims.xml");
+        final String request= FileUtils.readFileToString(xml);
+        Document dom = postAsDOM("wcs?", request);
         print(dom);
         assertEquals("2", xpath.evaluate("count(//wcs:CoverageDescriptions/wcs:CoverageDescription)", dom));
     }

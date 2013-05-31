@@ -51,13 +51,10 @@
   <bean id="wcs20DescribeEOCoverageSetKvpReader"
     class="org.geoserver.wcs2_0.eo.kvp.WCS20DescribeEOCoverageSetRequestReader" />
 
-<!-- 
-  <bean id="wcs201DescribeCoverageRequestReader" class="org.geoserver.wcs2_0.xml.WcsXmlReader">
-    <constructor-arg value="DescribeCoverage" />
+  <bean id="wcs201DescribeEOCoverageSetRequestReader" class="org.geoserver.wcs2_0.eo.xml.WcsEOXmlReader">
+    <constructor-arg value="DescribeEOCoverageSet" />
     <constructor-arg value="2.0.1" />
-    <constructor-arg ref="wcs-2.0.1-configuration" />
   </bean>
-   -->
 
   <bean id="wcs20DescribeEOCoverageSetResponse"
     class="org.geoserver.wcs2_0.eo.response.WCS20DescribeEOCoverageSetResponse"/>
