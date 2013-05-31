@@ -331,7 +331,7 @@ class GMLTransformer extends TransformerBase {
                 final DimensionInfo dimension, WCSDimensionsHelper helper)
                 throws IOException {
             Utilities.ensureNonNull("helper", helper);
-            final String startTag = initStartMetadataTag(name, dimension, helper);
+            final String startTag = initStartMetadataTag(TAG.ADDITIONAL_DIMENSION, name, dimension, helper);
 
             start(startTag);
             // Custom dimension only supports List presentation
@@ -380,20 +380,30 @@ class GMLTransformer extends TransformerBase {
          * Initialize the metadata start tag for a custom dimension, setting dimension name, 
          * checking for UOM, defaultValue, ...  
          * 
-         * @param name the name of the custom dimension
+         * @param dimensionTag the TAG referring to type of dimension (Time, Elevation, Additional ,...)
+         * @param name the name of the custom dimension 
          * @param dimension the custom dimension {@link DimensionInfo} instance
          * @param helper the {@link WCSDimensionsHelper} instance used to parse default values
          * @return
          * @throws IOException
          */
-        private String initStartMetadataTag(final String name, final DimensionInfo dimension,
+        private String initStartMetadataTag(final String dimensionTag, final String name, final DimensionInfo dimension,
                 final WCSDimensionsHelper helper) throws IOException {
             final String uom = dimension.getUnitSymbol();
-            final String defaultValue = helper.getDefaultValue(name);
-            final String startTag = TAG.ADDITIONAL_DIMENSION + " name = \"" + name + "\"" 
-                    + (uom != null ? (" uom=\"" + uom + "\"") : "") 
+            String defaultValue = null;
+            String prolog = null;
+            if (dimensionTag.equals(TAG.ADDITIONAL_DIMENSION)) {
+                prolog = TAG.ADDITIONAL_DIMENSION + " name = \"" + name + "\"";
+                defaultValue = helper.getDefaultValue(name);
+            } else if (dimensionTag.equals(TAG.ELEVATION_DOMAIN)) {
+                prolog = TAG.ELEVATION_DOMAIN;
+                defaultValue = helper.getBeginElevation();
+            } else if (dimensionTag.equals(TAG.TIME_DOMAIN)) {
+                prolog = TAG.TIME_DOMAIN;
+                defaultValue = helper.getEndTime();
+            }
+            return prolog + (uom != null ? (" uom=\"" + uom + "\"") : "") 
                     + (defaultValue != null ? (" default=\"" + defaultValue + "\"") : "");
-            return startTag;
         }
 
         /**
@@ -406,7 +416,7 @@ class GMLTransformer extends TransformerBase {
             Utilities.ensureNonNull("helper", helper);
             final DimensionInfo timeDimension = helper.getTimeDimension();
             if (timeDimension != null) {
-                start(TAG.TIME_DOMAIN);
+                start(initStartMetadataTag(TAG.TIME_DOMAIN, null, timeDimension, helper));
                 final DimensionPresentation presentation = timeDimension.getPresentation();
                 final String id = helper.getCoverageId();
                 switch(presentation) {
@@ -448,7 +458,7 @@ class GMLTransformer extends TransformerBase {
             // Null check has been performed in advance
             final DimensionInfo elevationDimension = helper.getElevationDimension();
             if (elevationDimension != null) {
-                start(TAG.ELEVATION_DOMAIN);
+                start(initStartMetadataTag(TAG.ELEVATION_DOMAIN, null, elevationDimension, helper));
                 final DimensionPresentation presentation = elevationDimension.getPresentation();
                 switch(presentation) {
                     // Where _er_ means elevation range
