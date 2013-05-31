@@ -262,8 +262,8 @@ public class GeoTiffGetCoverageTest extends WCSTestSupport {
         
         // tiling
         assertTrue(reader.isImageTiled(0));
-        assertEquals(512, reader.getTileHeight(0));
-        assertEquals(512, reader.getTileWidth(0));
+        assertEquals(368, reader.getTileHeight(0));
+        assertEquals(368, reader.getTileWidth(0));
         
         IIOMetadataNode node =((TIFFImageMetadata) reader.getImageMetadata(0)).getStandardDataNode();
         assertNotNull(node);
