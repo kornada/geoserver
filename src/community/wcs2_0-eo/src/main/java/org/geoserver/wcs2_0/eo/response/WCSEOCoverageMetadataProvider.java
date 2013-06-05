@@ -7,8 +7,10 @@ import java.util.logging.Logger;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.ResourceInfo;
+import org.geoserver.config.GeoServer;
 import org.geoserver.ows.URLMangler.URLType;
 import org.geoserver.ows.util.ResponseUtils;
+import org.geoserver.wcs.WCSInfo;
 import org.geoserver.wcs2_0.GetCoverage;
 import org.geoserver.wcs2_0.eo.WCSEOMetadata;
 import org.geoserver.wcs2_0.response.WCS20CoverageMetadataProvider;
@@ -83,9 +85,22 @@ import org.xml.sax.helpers.NamespaceSupport;
 public class WCSEOCoverageMetadataProvider implements WCS20CoverageMetadataProvider {
     
     static final Logger LOGGER = Logging.getLogger(WCSEOCoverageMetadataProvider.class);
+    private GeoServer gs;
 
+    public WCSEOCoverageMetadataProvider(GeoServer gs) {
+        this.gs = gs;
+    }
+    
+    private boolean isEarthObservationEnabled() {
+        WCSInfo wcs = gs.getService(WCSInfo.class);
+        return wcs.getMetadata().get(WCSEOMetadata.ENABLED.key, Boolean.class) == Boolean.TRUE;
+    }
+    
     @Override
     public String[] getSchemaLocations(String schemaBaseURL) {
+        if(!isEarthObservationEnabled()) {
+            return new String[0];
+        }
         String schemaLocation = ResponseUtils.buildURL(schemaBaseURL, "schemas/wcseo/1.0/wcsEOCoverage.xsd",
                 null, URLType.RESOURCE);
         return new String[] { WCSEOMetadata.NAMESPACE, schemaLocation };
@@ -93,6 +108,9 @@ public class WCSEOCoverageMetadataProvider implements WCS20CoverageMetadataProvi
 
     @Override
     public void registerNamespaces(NamespaceSupport namespaces) {
+        if(!isEarthObservationEnabled()) {
+            return;
+        }
         namespaces.declarePrefix("wcseo", WCSEOMetadata.NAMESPACE);
         namespaces.declarePrefix("eop", "http://www.opengis.net/eop/2.0");
         namespaces.declarePrefix("gml", "http://www.opengis.net/gml/3.2");
@@ -101,7 +119,7 @@ public class WCSEOCoverageMetadataProvider implements WCS20CoverageMetadataProvi
 
     @Override
     public void encode(Translator tx, Object context) throws IOException {
-        if (!(context instanceof CoverageInfo)) {
+        if (!(context instanceof CoverageInfo) || !isEarthObservationEnabled()) {
             return;
         }
 

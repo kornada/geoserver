@@ -46,6 +46,27 @@ public class DescribeOECoverageSetTest extends WCSEOTestSupport {
     }
     
     @Test
+    public void testBasicNoMaxCount() throws Exception {
+        // remove the max count config
+        WCSInfo wcs = getGeoServer().getService(WCSInfo.class);
+        wcs.getMetadata().remove(WCSEOMetadata.COUNT_DEFAULT.key);
+        getGeoServer().save(wcs);
+        
+        Document dom = getAsDOM("wcs?request=DescribeEOCoverageSet&version=2.0.1&service=WCS&eoid=sf__timeranges_dss");
+//         print(dom);
+        
+        // main structure is there
+        assertEquals("1", xpath.evaluate("count(/wcseo:EOCoverageSetDescription)", dom));
+        assertEquals("1", xpath.evaluate("count(/wcseo:EOCoverageSetDescription/wcs:CoverageDescriptions)", dom));
+        assertEquals("1", xpath.evaluate("count(/wcseo:EOCoverageSetDescription/wcseo:DatasetSeriesDescriptions)", dom));
+        
+        // expected granules are there
+        assertEquals("12", xpath.evaluate("/wcseo:EOCoverageSetDescription/@numberMatched", dom));
+        assertEquals("12", xpath.evaluate("/wcseo:EOCoverageSetDescription/@numberReturned", dom));
+        assertEquals("12", xpath.evaluate("count(//wcs:CoverageDescriptions/wcs:CoverageDescription)", dom));
+    }
+    
+    @Test
     public void testSectionsAll() throws Exception {
         Document dom = getAsDOM("wcs?request=DescribeEOCoverageSet&version=2.0.1&service=WCS&eoid=sf__watertemp_dss&sections=All");
         

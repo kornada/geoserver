@@ -2,6 +2,7 @@ package org.geoserver.wcs2_0.eo;
 
 import static org.junit.Assert.assertEquals;
 
+import org.geoserver.wcs.WCSInfo;
 import org.junit.Test;
 import org.w3c.dom.Document;
 
@@ -10,7 +11,7 @@ public class DescribeCoverageTest extends WCSEOTestSupport {
     @Test
     public void testEOExtensions() throws Exception {
         Document dom = getAsDOM("wcs?request=DescribeCoverage&version=2.0.1&service=WCS&coverageid=sf__timeranges");
-        print(dom);
+        // print(dom);
         
         // we have one eo metadata in the right place
         assertEquals("1", xpath.evaluate("count(//gmlcov:metadata/gmlcov:Extension/wcseo:EOMetadata/eop:EarthObservation)", dom));
@@ -26,6 +27,20 @@ public class DescribeCoverageTest extends WCSEOTestSupport {
         assertEquals("sf__timeranges", xpath.evaluate("//eop:EarthObservation/eop:metaDataProperty/eop:EarthObservationMetaData/eop:identifier", dom));
         assertEquals("NOMINAL", xpath.evaluate("//eop:EarthObservation/eop:metaDataProperty/eop:EarthObservationMetaData/eop:acquisitionType", dom));
         assertEquals("ARCHIVED", xpath.evaluate("//eop:EarthObservation/eop:metaDataProperty/eop:EarthObservationMetaData/eop:status", dom));
+    }
+    
+    @Test
+    public void testEOExtensionsDisabled() throws Exception {
+        // disable EO extensions
+        WCSInfo wcs = getGeoServer().getService(WCSInfo.class);
+        wcs.getMetadata().put(WCSEOMetadata.ENABLED.key, false);
+        getGeoServer().save(wcs);
+        
+        Document dom = getAsDOM("wcs?request=DescribeCoverage&version=2.0.1&service=WCS&coverageid=sf__timeranges");
+        print(dom);
+        
+        // we don't have the EO extensions
+        assertEquals("0", xpath.evaluate("count(//gmlcov:metadata/gmlcov:Extension/wcseo:EOMetadata)", dom));
     }
         
 

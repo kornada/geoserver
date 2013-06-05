@@ -15,6 +15,7 @@ import net.opengis.wcs20.GetCapabilitiesType;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.DimensionInfo;
 import org.geoserver.catalog.ResourceInfo;
+import org.geoserver.config.GeoServer;
 import org.geoserver.ows.URLMangler;
 import org.geoserver.ows.URLMangler.URLType;
 import org.geoserver.ows.util.ResponseUtils;
@@ -36,15 +37,25 @@ import org.xml.sax.helpers.NamespaceSupport;
  */
 public class WCSEOExtendedCapabilitiesProvider extends WCSExtendedCapabilitiesProvider {
     EOCoverageResourceCodec codec;
+    GeoServer gs;
     
-    public WCSEOExtendedCapabilitiesProvider(EOCoverageResourceCodec codec) {
+    public WCSEOExtendedCapabilitiesProvider(GeoServer gs, EOCoverageResourceCodec codec) {
         this.codec = codec;
+        this.gs = gs;
+    }
+    
+    private boolean isEarthObservationEnabled() {
+        WCSInfo wcs = gs.getService(WCSInfo.class);
+        return wcs.getMetadata().get(WCSEOMetadata.ENABLED.key, Boolean.class) == Boolean.TRUE;
     }
 
     /**
      * IGN : Do we still need to host this xsd ?
      */
     public String[] getSchemaLocations(String schemaBaseURL) {
+        if(!isEarthObservationEnabled()) {
+            return new String[0];
+        }
         String schemaLocation = ResponseUtils.buildURL(schemaBaseURL, "schemas/wcseo/1.0/wcsEOGetCapabilites.xsd",
                 null, URLType.RESOURCE);
         return new String[] { WCSEOMetadata.NAMESPACE, schemaLocation };
@@ -52,14 +63,15 @@ public class WCSEOExtendedCapabilitiesProvider extends WCSExtendedCapabilitiesPr
 
     @Override
     public void registerNamespaces(NamespaceSupport namespaces) {
-        namespaces.declarePrefix("wcseo", WCSEOMetadata.NAMESPACE);
+        if(isEarthObservationEnabled()) {
+            namespaces.declarePrefix("wcseo", WCSEOMetadata.NAMESPACE);
+        }
     }
 
     @Override
     public void encodeExtendedOperations(org.geoserver.ExtendedCapabilitiesProvider.Translator tx,
             WCSInfo wcs, GetCapabilitiesType request) throws IOException {
-        Boolean enabled = wcs.getMetadata().get(WCSEOMetadata.ENABLED.key, Boolean.class);
-        if(enabled == null || !enabled) {
+        if(!isEarthObservationEnabled()) {
             return;
         }
         

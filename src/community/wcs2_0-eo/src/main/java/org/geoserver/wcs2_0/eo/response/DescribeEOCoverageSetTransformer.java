@@ -126,7 +126,12 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
             List<CoverageGranules> coverageGranules = getCoverageGranules(dcs, coverages);
             int granuleCount = getGranuleCount(coverageGranules);
             Integer maxCoverages = getMaxCoverages(dcs);
-            int returned = granuleCount < maxCoverages ? granuleCount : maxCoverages;
+            int returned;
+            if(maxCoverages != null) {
+                returned = granuleCount < maxCoverages ? granuleCount : maxCoverages;
+            } else {
+                returned = granuleCount;
+            }
 
             String eoSchemaLocation = ResponseUtils.buildSchemaURL(dcs.getBaseUrl(),
                     "wcseo/1.0/wcsEOAll.xsd");
@@ -149,8 +154,10 @@ public class DescribeEOCoverageSetTransformer extends TransformerBase {
             start("wcseo:EOCoverageSetDescription", atts);
 
             if(!coverageGranules.isEmpty()) {
-                List<CoverageGranules> reducedGranules = applyMaxCoverages(coverageGranules,
-                        maxCoverages);
+                List<CoverageGranules> reducedGranules = coverageGranules;
+                if(maxCoverages != null) {
+                    reducedGranules = applyMaxCoverages(coverageGranules, maxCoverages);
+                }
 
                 boolean allSections = dcs.getSections() == null
                         || dcs.getSections().getSection() == null

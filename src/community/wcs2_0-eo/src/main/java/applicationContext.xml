@@ -16,14 +16,13 @@
 
   <bean id="wcsEoExtendedCapsProvider"
     class="org.geoserver.wcs2_0.eo.response.WCSEOExtendedCapabilitiesProvider">
-    <constructor-arg index="0" ref="wcsEoCoverageResourceCodec" />
+    <constructor-arg index="0" ref="geoServer" />
+    <constructor-arg index="1" ref="wcsEoCoverageResourceCodec" />
   </bean>
 
   <bean id="wcsEoCoverageMetadataProvider"
     class="org.geoserver.wcs2_0.eo.response.WCSEOCoverageMetadataProvider">
-    <!-- 
-    <constructor-arg index="0" ref="wcsEoCoverageResourceCodec" />
-     -->
+    <constructor-arg index="0" ref="geoServer" />
   </bean>
 
 
