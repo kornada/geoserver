@@ -338,11 +338,9 @@ public class WCS20GetCapabilitiesTransformer extends TransformerBase {
             // element("ows:Profile","http://www.opengis.net/spec/WCS_coverage-encoding/1.0/conf/coverage-encoding"); // TODO: check specs and URL
             
             // === GeoTiff encoding extension
-            element("ows:Profile","http://www.opengis.net/spec/GMLCOV_geotiff-coverages/1.0/conf/geotiff-coverage");// TODO: check specs and URL
-            element("ows:Profile","http://www.opengis.net/spec/WCS_coverage-encoding_geotiff/1.0/"); 
+            element("ows:Profile"," http://www.opengis.net/spec/WCS_geotiff-coverages/1.0/conf/geotiff-coverage");// TODO: check specs and URL
             
             // === GML encoding
-            element("ows:Profile","http://www.opengis.net/spec/WCS_coverage-encoding_gml/1.0/");
             element("ows:Profile","http://www.opengis.net/spec/GMLCOV/1.0/conf/gml-coverage");
             element("ows:Profile","http://www.opengis.net/spec/GMLCOV/1.0/conf/special-format");
             element("ows:Profile","http://www.opengis.net/spec/GMLCOV/1.0/conf/multipart");
