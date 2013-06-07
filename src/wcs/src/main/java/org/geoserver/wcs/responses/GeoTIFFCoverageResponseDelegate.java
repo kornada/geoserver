@@ -14,6 +14,7 @@ import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import javax.media.jai.JAI;
 
@@ -27,6 +28,7 @@ import org.geotools.gce.geotiff.GeoTiffFormat;
 import org.geotools.gce.geotiff.GeoTiffWriteParams;
 import org.geotools.gce.geotiff.GeoTiffWriter;
 import org.geotools.util.Utilities;
+import org.geotools.util.logging.Logging;
 import org.opengis.coverage.grid.GridEnvelope;
 import org.opengis.parameter.GeneralParameterValue;
 import org.opengis.parameter.ParameterValueGroup;
@@ -43,6 +45,8 @@ import com.sun.media.imageio.plugins.tiff.BaselineTIFFTagSet;
  */
 public class GeoTIFFCoverageResponseDelegate extends BaseCoverageResponseDelegate implements CoverageResponseDelegate {
 
+    private final static Logger LOGGER= Logging.getLogger(GeoTIFFCoverageResponseDelegate.class.toString());
+    
     /** DEFAULT_JPEG_COMPRESSION_QUALITY */
     private static final float DEFAULT_JPEG_COMPRESSION_QUALITY = 0.75f;
 
@@ -179,14 +183,21 @@ public class GeoTIFFCoverageResponseDelegate extends BaseCoverageResponseDelegat
             throws WcsException {
 
         // start with default dimension, since tileW and tileH are optional
-        final Dimension tileDimensions= new Dimension(JAI.getDefaultTileSize());
-        GridEnvelope gr = sourceCoverage.getGridGeometry().getGridRange();
+        final RenderedImage sourceImage=sourceCoverage.getRenderedImage();
+        final SampleModel sampleModel = sourceImage.getSampleModel();
+        final int sourceTileW=sampleModel.getWidth();
+        final int sourceTileH=sampleModel.getHeight();        
+        final Dimension tileDimensions= new Dimension(sourceTileW,sourceTileH);
+        LOGGER.fine("Source tiling:"+tileDimensions.width+"x"+tileDimensions.height);
+        // if the tile size exceeds the image dimension, let's retile to save space on output image
+        final GridEnvelope gr = sourceCoverage.getGridGeometry().getGridRange();
         if(gr.getSpan(0) < tileDimensions.width) {
-            tileDimensions.width = refineTileSize(gr.getSpan(0));
+            tileDimensions.width = gr.getSpan(0);
         }
         if(gr.getSpan(1) < tileDimensions.height) {
-            tileDimensions.height = refineTileSize(gr.getSpan(1));
+            tileDimensions.height = gr.getSpan(1);
         }
+        LOGGER.fine("Source tiling reviewed to save space:"+tileDimensions.width+"x"+tileDimensions.height);        
 
         //
         // tiling
@@ -251,8 +262,13 @@ public class GeoTIFFCoverageResponseDelegate extends BaseCoverageResponseDelegat
         }
 
         // set tile dimensions
-        wp.setTilingMode(GeoToolsWriteParams.MODE_EXPLICIT);
-        wp.setTiling(tileDimensions.width, tileDimensions.height); 
+        if(tileDimensions.width!=sourceTileW||tileDimensions.height!=sourceTileH){
+            LOGGER.fine("Final tiling:"+tileDimensions.width+"x"+tileDimensions.height);
+            wp.setTilingMode(GeoToolsWriteParams.MODE_EXPLICIT);
+            wp.setTiling(tileDimensions.width, tileDimensions.height);
+        } else {
+            LOGGER.fine("Mantaining original tiling");
+        }
     }
 
     /**
@@ -262,7 +278,7 @@ public class GeoTIFFCoverageResponseDelegate extends BaseCoverageResponseDelegat
      * @param inputSize
      * @return
      */
-    private int refineTileSize(final int inputSize) {
+    private static int refineTileSize(final int inputSize) {
         int size = inputSize;
         if (size % 16 != 0) {
             int numTiles = (int) Math.ceil(size / 16d);
