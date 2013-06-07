@@ -10,7 +10,6 @@ import org.geoserver.catalog.DimensionPresentation;
 import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.data.test.MockData;
 import org.geoserver.data.test.SystemTestData;
-import org.geoserver.data.test.TestData;
 import org.geoserver.wcs2_0.WCSTestSupport;
 import org.junit.Before;
 import org.junit.Test;
@@ -101,6 +100,20 @@ public class DescribeCoverageTest extends WCSTestSupport {
         assertXpathEvaluatesTo("sf__rasterFilter", "//wcs:CoverageDescriptions/wcs:CoverageDescription[1]/@gml:id", dom);
         assertXpathEvaluatesTo("3", "count(//wcs:CoverageDescription[1]//gmlcov:rangeType//swe:DataRecord//swe:field)", dom);
         assertXpathEvaluatesTo("image/tiff", "//wcs:CoverageDescriptions/wcs:CoverageDescription[1]//wcs:ServiceParameters//wcs:nativeFormat", dom);
+    }
+    
+    @Test
+    public void gridCellCenterEnforce() throws Exception {
+            Document dom = getAsDOM(DESCRIBE_URL + "&coverageId=wcs__BlueMarble");
+            assertNotNull(dom);
+//             print(dom, System.out);
+            
+            checkValidationErrors(dom, WCS20_SCHEMA);
+            assertXpathEvaluatesTo("3", "count(//wcs:CoverageDescription//gmlcov:rangeType//swe:DataRecord//swe:field)", dom);
+            assertXpathEvaluatesTo("image/tiff", "//wcs:CoverageDescriptions//wcs:CoverageDescription[1]//wcs:ServiceParameters//wcs:nativeFormat", dom);
+            
+            // enforce pixel center
+            assertXpathEvaluatesTo("-43.0020833333312 146.5020833333281", "//wcs:CoverageDescriptions//wcs:CoverageDescription[1]//gml:domainSet//gml:RectifiedGrid//gml:origin//gml:Point//gml:pos", dom);
     }
     
     @Test

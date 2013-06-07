@@ -1,7 +1,8 @@
 package org.geoserver.wcs2_0.xml;
 
+import static junit.framework.TestCase.assertEquals;
+import static junit.framework.TestCase.assertTrue;
 import static org.custommonkey.xmlunit.XMLAssert.assertXpathEvaluatesTo;
-import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -10,8 +11,6 @@ import java.io.IOException;
 import javax.mail.BodyPart;
 import javax.mail.Multipart;
 import javax.xml.namespace.QName;
-
-import junit.framework.Assert;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -161,7 +160,7 @@ public class GetCoverageTest extends WCSTestSupport {
 
             final double scale = getScale(targetCoverage);
             assertEnvelopeEquals(expectedEnvelope,scale,(GeneralEnvelope) targetCoverage.getEnvelope(),scale);
-            Assert.assertTrue(CRS.equalsIgnoreMetadata(targetCoverage.getCoordinateReferenceSystem(), expectedEnvelope.getCoordinateReferenceSystem()));
+            assertTrue(CRS.equalsIgnoreMetadata(targetCoverage.getCoordinateReferenceSystem(), expectedEnvelope.getCoordinateReferenceSystem()));
             assertEquals(gridRange.getSpan(0), 360);
             assertEquals(gridRange.getSpan(1), 120);
             
@@ -205,7 +204,7 @@ public class GetCoverageTest extends WCSTestSupport {
 
             final double scale = getScale(targetCoverage);
             assertEnvelopeEquals(expectedEnvelope,scale,(GeneralEnvelope) targetCoverage.getEnvelope(),scale);
-            Assert.assertTrue(CRS.equalsIgnoreMetadata(targetCoverage.getCoordinateReferenceSystem(), expectedEnvelope.getCoordinateReferenceSystem()));
+            assertTrue(CRS.equalsIgnoreMetadata(targetCoverage.getCoordinateReferenceSystem(), expectedEnvelope.getCoordinateReferenceSystem()));
             assertEquals(gridRange.getSpan(0), 120);
             assertEquals(gridRange.getSpan(1), 120);
             
@@ -325,7 +324,7 @@ public class GetCoverageTest extends WCSTestSupport {
     
             final double scale = getScale(targetCoverage);
             assertEnvelopeEquals(expectedEnvelope,scale,(GeneralEnvelope) targetCoverage.getEnvelope(),scale);
-            Assert.assertTrue(CRS.equalsIgnoreMetadata(targetCoverage.getCoordinateReferenceSystem(), expectedEnvelope.getCoordinateReferenceSystem()));
+            assertTrue(CRS.equalsIgnoreMetadata(targetCoverage.getCoordinateReferenceSystem(), expectedEnvelope.getCoordinateReferenceSystem()));
             assertEquals(gridRange.getSpan(0), 120);
             assertEquals(gridRange.getSpan(1), 360);
             
@@ -369,7 +368,7 @@ public class GetCoverageTest extends WCSTestSupport {
     
             final double scale = getScale(targetCoverage);
             assertEnvelopeEquals(expectedEnvelope,scale,(GeneralEnvelope) targetCoverage.getEnvelope(),scale);
-            Assert.assertTrue(CRS.equalsIgnoreMetadata(targetCoverage.getCoordinateReferenceSystem(), expectedEnvelope.getCoordinateReferenceSystem()));
+            assertTrue(CRS.equalsIgnoreMetadata(targetCoverage.getCoordinateReferenceSystem(), expectedEnvelope.getCoordinateReferenceSystem()));
             assertEquals(gridRange.getSpan(1), 1);
             assertEquals(gridRange.getSpan(0), 120);
             
@@ -425,7 +424,7 @@ public class GetCoverageTest extends WCSTestSupport {
     
             final double scale = getScale(targetCoverage);
             assertEnvelopeEquals(expectedEnvelope,scale,(GeneralEnvelope) targetCoverage.getEnvelope(),scale);
-            Assert.assertTrue(CRS.equalsIgnoreMetadata(targetCoverage.getCoordinateReferenceSystem(), expectedEnvelope.getCoordinateReferenceSystem()));
+            assertTrue(CRS.equalsIgnoreMetadata(targetCoverage.getCoordinateReferenceSystem(), expectedEnvelope.getCoordinateReferenceSystem()));
             assertEquals(gridRange.getSpan(0), 1);
             assertEquals(gridRange.getSpan(1), 360);
             
@@ -470,7 +469,7 @@ public class GetCoverageTest extends WCSTestSupport {
     
             final double scale = getScale(targetCoverage);
             assertEnvelopeEquals(expectedEnvelope,scale,(GeneralEnvelope) targetCoverage.getEnvelope(),scale);
-            Assert.assertTrue(CRS.equalsIgnoreMetadata(targetCoverage.getCoordinateReferenceSystem(), expectedEnvelope.getCoordinateReferenceSystem()));
+            assertTrue(CRS.equalsIgnoreMetadata(targetCoverage.getCoordinateReferenceSystem(), expectedEnvelope.getCoordinateReferenceSystem()));
             assertEquals(gridRange.getSpan(1), 1);
             assertEquals(gridRange.getSpan(0), 360);
             
@@ -667,7 +666,7 @@ public class GetCoverageTest extends WCSTestSupport {
             GridCoverage2DReader sourceReader = (GridCoverage2DReader) getCatalog().getCoverageByName(getLayerId(WATTEMP)).getGridCoverageReader(null, null);
             GeneralEnvelope expectedEnvelope  = sourceReader.getOriginalEnvelope();
             assertEnvelopeEquals(expectedEnvelope, 1.0,(GeneralEnvelope) targetCoverage.getEnvelope(), 1.0);
-            Assert.assertTrue(CRS.equalsIgnoreMetadata(targetCoverage.getCoordinateReferenceSystem(), expectedEnvelope.getCoordinateReferenceSystem()));
+            assertTrue(CRS.equalsIgnoreMetadata(targetCoverage.getCoordinateReferenceSystem(), expectedEnvelope.getCoordinateReferenceSystem()));
             
             // check raster space consistency
             final GridEnvelope gridRange = targetCoverage.getGridGeometry().getGridRange();

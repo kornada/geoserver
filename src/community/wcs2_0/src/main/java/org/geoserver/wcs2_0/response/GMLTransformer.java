@@ -956,7 +956,7 @@ class GMLTransformer extends TransformerBase {
             // Axis Label
             element("gml:axisLabels", "i j");
 
-            final MathTransform2D transform = gg2D.getGridToCRS2D(PixelOrientation.UPPER_LEFT);
+            final MathTransform2D transform = gg2D.getGridToCRS2D(PixelOrientation.CENTER);
             if (!(transform instanceof AffineTransform2D)) {
                 throw new IllegalStateException("Invalid grid to worl provided:"
                         + transform.toString());
