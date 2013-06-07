@@ -272,23 +272,6 @@ public class GeoTIFFCoverageResponseDelegate extends BaseCoverageResponseDelegat
     }
 
     /**
-     * OGC 12-101 (GeoTIFF Coverage Encoding Extension) requires that tile width and tile height are multiple of 16.
-     * This method will round the tile size to a multiple of 16 when needed 
-     * 
-     * @param inputSize
-     * @return
-     */
-    private static int refineTileSize(final int inputSize) {
-        int size = inputSize;
-        if (size % 16 != 0) {
-            int numTiles = (int) Math.ceil(size / 16d);
-            size  = numTiles * 16;
-        }
-
-        return size;
-    }
-
-    /**
      * Handle compression encoding parameters for WCS.
      * 
      * <p>
