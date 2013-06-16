@@ -16,6 +16,7 @@ import org.geoserver.catalog.CatalogBuilder;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.CoverageStoreInfo;
 import org.geoserver.catalog.LayerInfo;
+import org.geoserver.catalog.SingleGridCoverage2DReader;
 import org.geoserver.rest.RestletException;
 import org.geoserver.rest.format.DataFormat;
 import org.geotools.coverage.grid.io.AbstractGridFormat;
@@ -136,7 +137,13 @@ public class CoverageStoreFileResource extends StoreFileResource {
         if (isInlineUpload(method)) {
             //TODO: create a method to figure out the relative url instead of making assumption
             // about the structure
-            info.setURL("file:data/" + workspace + "/" + coveragestore + "/" + uploadedFile.getName() );
+            String url;
+            if(uploadedFile.isDirectory() && uploadedFile.getName().equals(coveragestore)) {
+                url = "file:data/" + workspace + "/" + coveragestore;
+            } else {
+                url = "file:data/" + workspace + "/" + coveragestore + "/" + uploadedFile.getName();
+            }
+            info.setURL(url);
         }
         else {
             info.setURL( uploadedFileURL.toExternalForm());
@@ -159,11 +166,6 @@ public class CoverageStoreFileResource extends StoreFileResource {
             return;
         }
         
-        String coverage = uploadedFile.getName();
-        if ( coverage.indexOf( '.') != -1 ) { 
-            coverage = coverage.substring( 0, coverage.indexOf( '.') );
-        }
-        
         try {
             GridCoverage2DReader reader = 
                 (GridCoverage2DReader) ((AbstractGridFormat) coverageFormat).getReader(uploadedFile.toURL());
@@ -178,96 +180,29 @@ public class CoverageStoreFileResource extends StoreFileResource {
             	customParameters.put(AbstractGridFormat.USE_JAI_IMAGEREAD.getName().toString(), Boolean.valueOf(useJAIImageReadParam));
             }
             
-            CoverageInfo cinfo = builder.buildCoverage( reader, customParameters );
-            
             //check if the name of the coverage was specified
             String coverageName = form.getFirstValue("coverageName");
-            if ( coverageName != null ) {
-                cinfo.setName( coverageName );
+            String[] names = reader.getGridCoverageNames();
+            
+            if(names.length > 1 && coverageName != null) {
+                throw new RestletException("The reader found more than one coverage, " +
+                		"coverageName cannot be used in this case (it would generate " +
+                		"the same name for all coverages found", Status.CLIENT_ERROR_BAD_REQUEST);
             }
             
-            if ( !add ) {
-                //update the existing
-                CoverageInfo existing = catalog.getCoverageByCoverageStore(info, 
-                    coverageName != null ? coverageName : coverage );
-                if ( existing == null ) {
-                    //grab the first if there is only one
-                    List<CoverageInfo> coverages = catalog.getCoveragesByCoverageStore( info);
-                    if ( coverages.size() == 1 ) {
-                        existing = coverages.get(0);
-                    }
-                    if ( coverages.size() == 0 ) {
-                        //no coverages yet configured, change add flag and continue on
-                        add = true;
-                    }
-                    else {
-                        // multiple coverages, and one to configure not specified
-                        throw new RestletException( "Unable to determine coverage to configure.", Status.SERVER_ERROR_INTERNAL);
-                    }
+            // configure all available coverages, preserving backwards compatibility for the
+            // case of single coverage reader
+            if(names.length > 1) {
+                for (String name : names) {
+                    SingleGridCoverage2DReader singleReader = new SingleGridCoverage2DReader(reader, name);
+                    configureCoverageInfo(builder, info, add, name, name, singleReader,
+                            customParameters);
                 }
-                
-                if ( existing != null ) {
-                    builder.updateCoverage(existing,cinfo);
-                    catalog.save( existing );
-                    cinfo = existing;
-                }
+            } else {
+                configureCoverageInfo(builder, info, add, names[0], coverageName, reader,
+                        customParameters);
             }
             
-            //do some post configuration, if srs is not known or unset, transform to 4326
-            if ("UNKNOWN".equals(cinfo.getSRS())) {
-                //CoordinateReferenceSystem sourceCRS = cinfo.getBoundingBox().getCoordinateReferenceSystem();
-                //CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:4326", true);
-                //ReferencedEnvelope re = cinfo.getBoundingBox().transform(targetCRS, true);
-                cinfo.setSRS( "EPSG:4326" );
-                //cinfo.setCRS( targetCRS );
-                //cinfo.setBoundingBox( re );
-            }
-
-            //add/save
-            if ( add ) {
-                catalog.add( cinfo );
-                
-                LayerInfo layerInfo = builder.buildLayer( cinfo );
-                //JD: commenting this out, these sorts of edits should be handled
-                // with a second PUT request on the created coverage
-                /*
-                String styleName = form.getFirstValue("style");
-                if ( styleName != null ) {
-                    StyleInfo style = catalog.getStyleByName( styleName );
-                    if ( style != null ) {
-                        layerInfo.setDefaultStyle( style );
-                        if ( !layerInfo.getStyles().contains( style ) ) {
-                            layerInfo.getStyles().add( style );
-                        }
-                    }
-                    else {
-                        LOGGER.warning( "Client specified style '" + styleName + "'but no such style exists.");
-                    }
-                }
-
-                String path = form.getFirstValue( "path");
-                if ( path != null ) {
-                    layerInfo.setPath( path );
-                }
-                */
-
-                boolean valid = true;
-                try {
-                    if (!catalog.validate(layerInfo, true).isEmpty()) {
-                        valid = false;
-                    }
-                } catch (Exception e) {
-                    valid = false;
-                }
-
-                layerInfo.setEnabled(valid);
-                catalog.add(layerInfo);
-            }
-            else {
-                catalog.save( cinfo );
-                
-                //TODO: update the layers pointing at this coverage
-            }
             
             //poach the coverage store data format
             DataFormat df = new CoverageStoreResource(getContext(),request,response,catalog).createXMLFormat(request, response);
@@ -279,7 +214,106 @@ public class CoverageStoreFileResource extends StoreFileResource {
         }
     }
 
+    private void configureCoverageInfo(CatalogBuilder builder, CoverageStoreInfo storeInfo,
+            boolean add, String nativeName, String coverageName, GridCoverage2DReader reader,
+            final Map customParameters) throws Exception, IOException {
+        CoverageInfo cinfo = builder.buildCoverage( reader, customParameters );
+        
+        if (coverageName != null) {
+            cinfo.setName(coverageName);
+        }
+        if (nativeName != null) {
+            cinfo.setNativeName(nativeName);
+        }
+        
+        if ( !add ) {
+            //update the existing
+            CoverageInfo existing = catalog.getCoverageByCoverageStore(storeInfo, coverageName != null ? coverageName: nativeName);
+            if ( existing == null ) {
+                //grab the first if there is only one
+                List<CoverageInfo> coverages = catalog.getCoveragesByCoverageStore( storeInfo);
+                if ( coverages.size() == 1 ) {
+                    existing = coverages.get(0);
+                }
+                if ( coverages.size() == 0 ) {
+                    //no coverages yet configured, change add flag and continue on
+                    add = true;
+                }
+                else {
+                    // multiple coverages, and one to configure not specified
+                    throw new RestletException( "Unable to determine coverage to configure.", Status.SERVER_ERROR_INTERNAL);
+                }
+            }
+            
+            if ( existing != null ) {
+                builder.updateCoverage(existing,cinfo);
+                catalog.save( existing );
+                cinfo = existing;
+            }
+        }
+        
+        //do some post configuration, if srs is not known or unset, transform to 4326
+        if ("UNKNOWN".equals(cinfo.getSRS())) {
+            //CoordinateReferenceSystem sourceCRS = cinfo.getBoundingBox().getCoordinateReferenceSystem();
+            //CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:4326", true);
+            //ReferencedEnvelope re = cinfo.getBoundingBox().transform(targetCRS, true);
+            cinfo.setSRS( "EPSG:4326" );
+            //cinfo.setCRS( targetCRS );
+            //cinfo.setBoundingBox( re );
+        }
+
+        //add/save
+        if ( add ) {
+            catalog.add( cinfo );
+            
+            LayerInfo layerInfo = builder.buildLayer( cinfo );
+            //JD: commenting this out, these sorts of edits should be handled
+            // with a second PUT request on the created coverage
+            /*
+            String styleName = form.getFirstValue("style");
+            if ( styleName != null ) {
+                StyleInfo style = catalog.getStyleByName( styleName );
+                if ( style != null ) {
+                    layerInfo.setDefaultStyle( style );
+                    if ( !layerInfo.getStyles().contains( style ) ) {
+                        layerInfo.getStyles().add( style );
+                    }
+                }
+                else {
+                    LOGGER.warning( "Client specified style '" + styleName + "'but no such style exists.");
+                }
+            }
+
+            String path = form.getFirstValue( "path");
+            if ( path != null ) {
+                layerInfo.setPath( path );
+            }
+            */
+
+            boolean valid = true;
+            try {
+                if (!catalog.validate(layerInfo, true).isEmpty()) {
+                    valid = false;
+                }
+            } catch (Exception e) {
+                valid = false;
+            }
+
+            layerInfo.setEnabled(valid);
+            catalog.add(layerInfo);
+        }
+        else {
+            catalog.save( cinfo );
+            
+            //TODO: update the layers pointing at this coverage
+        }
+    }
+
     protected File findPrimaryFile(File directory, String format) {
+        // first check if the format accepts a whole directory
+        if ( ((AbstractGridFormat)coverageFormat).accepts(directory) ) {
+            return directory;
+        }
         for ( File f : directory.listFiles() ) {
             if ( ((AbstractGridFormat)coverageFormat).accepts(f) ) {
                 return f;
