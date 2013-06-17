@@ -166,11 +166,12 @@ public class CoverageStoreFileResource extends StoreFileResource {
             return;
         }
         
+        GridCoverage2DReader reader = null;
         try {
-            GridCoverage2DReader reader = 
+            reader = 
                 (GridCoverage2DReader) ((AbstractGridFormat) coverageFormat).getReader(uploadedFile.toURL());
             if ( reader == null ) {
-                throw new RestletException( "Could not aquire reader for coverage.", Status.SERVER_ERROR_INTERNAL );
+                throw new RestletException( "Could not aquire reader for coverage.", Status.SERVER_ERROR_INTERNAL);
             }
             
             // coverage read params
@@ -210,7 +211,18 @@ public class CoverageStoreFileResource extends StoreFileResource {
             response.setStatus(Status.SUCCESS_CREATED);
         }
         catch( Exception e ) {
+            if(e instanceof RestletException) {
+                throw (RestletException) e;
+            }
             throw new RestletException( "Error auto-configuring coverage", Status.SERVER_ERROR_INTERNAL, e );
+        } finally {
+            if(reader != null) {
+                try {
+                    reader.dispose();
+                } catch(IOException e)  {
+                    // it's ok, we tried
+                }            
+            }
         }
     }
 
@@ -228,20 +240,28 @@ public class CoverageStoreFileResource extends StoreFileResource {
         
         if ( !add ) {
             //update the existing
-            CoverageInfo existing = catalog.getCoverageByCoverageStore(storeInfo, coverageName != null ? coverageName: nativeName);
+            String name = coverageName != null ? coverageName: nativeName;
+            CoverageInfo existing = catalog.getCoverageByCoverageStore(storeInfo, name);
             if ( existing == null ) {
                 //grab the first if there is only one
                 List<CoverageInfo> coverages = catalog.getCoveragesByCoverageStore( storeInfo);
-                if ( coverages.size() == 1 ) {
+                // single coverage reader?
+                if ( coverages.size() == 1 && coverages.get(0).getNativeName() == null) {
                     existing = coverages.get(0);
                 }
+                // check if we have it or not
                 if ( coverages.size() == 0 ) {
-                    //no coverages yet configured, change add flag and continue on
+                    // no coverages yet configured, change add flag and continue on
                     add = true;
-                }
-                else {
-                    // multiple coverages, and one to configure not specified
-                    throw new RestletException( "Unable to determine coverage to configure.", Status.SERVER_ERROR_INTERNAL);
+                } else {
+                    for (CoverageInfo ci : coverages) {
+                        if(ci.getNativeName().equals(name)) {
+                            existing = ci;
+                        }
+                    }
+                    if(existing == null) {
+                        add = true;
+                    }
                 }
             }
             
