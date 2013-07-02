@@ -10,7 +10,7 @@ import java.util.List;
 
 import org.geotools.coverage.grid.io.DimensionDescriptor;
 import org.geotools.coverage.grid.io.GranuleSource;
-import org.geotools.coverage.grid.io.HarvestedFile;
+import org.geotools.coverage.grid.io.HarvestedSource;
 import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
 import org.geotools.factory.Hints;
 import org.opengis.feature.simple.SimpleFeatureType;
@@ -59,7 +59,7 @@ public class StructuredSingleGridCoverage2DReader extends SingleGridCoverage2DRe
     }
 
     @Override
-    public List<HarvestedFile> harvest(String defaultTargetCoverage, File source, Hints hints)
+    public List<HarvestedSource> harvest(String defaultTargetCoverage, Object source, Hints hints)
             throws IOException, UnsupportedOperationException {
         return structuredDelegate.harvest(defaultTargetCoverage, source, hints);
     }

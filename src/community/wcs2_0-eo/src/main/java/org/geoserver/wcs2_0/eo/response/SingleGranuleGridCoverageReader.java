@@ -4,7 +4,6 @@
  */
 package org.geoserver.wcs2_0.eo.response;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
@@ -18,8 +17,7 @@ import org.geoserver.util.ISO8601Formatter;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.io.DimensionDescriptor;
 import org.geotools.coverage.grid.io.GranuleSource;
-import org.geotools.coverage.grid.io.GridCoverage2DReader;
-import org.geotools.coverage.grid.io.HarvestedFile;
+import org.geotools.coverage.grid.io.HarvestedSource;
 import org.geotools.coverage.grid.io.OverviewPolicy;
 import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
 import org.geotools.factory.Hints;
@@ -150,7 +148,7 @@ public class SingleGranuleGridCoverageReader implements StructuredGridCoverage2D
         return reader.getMetadataValue(name);
     }
 
-    public List<HarvestedFile> harvest(String defaultTargetCoverage, File source, Hints hints)
+    public List<HarvestedSource> harvest(String defaultTargetCoverage, Object source, Hints hints)
             throws IOException, UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
