@@ -17,7 +17,7 @@
    <groupId>org.geoserver.extension</groupId>
    <artifactId>pgraster</artifactId>
    <packaging>jar</packaging>
-   <name>PGRaster DataStore Extension</name>
+   <name>PGRaster DataStore Extension for automatic configuration</name>
 
    <dependencies>
       <dependency>
