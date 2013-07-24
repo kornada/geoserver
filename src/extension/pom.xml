@@ -251,6 +251,13 @@
       </modules>
     </profile>
 
+    <profile>
+      <id>pgraster</id>
+      <modules>
+        <module>pgraster</module>
+      </modules>
+    </profile>
+
     <!-- allExtensions profile, includes all modules -->
     <profile>
       <id>allExtensions</id>

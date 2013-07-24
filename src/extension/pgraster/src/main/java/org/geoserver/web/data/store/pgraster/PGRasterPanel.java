@@ -51,13 +51,16 @@ public class PGRasterPanel extends Panel {
 
     FormComponent importopt;
 
+    FormComponent epsgcode;
+
     public PGRasterPanel(final String id, final IModel paramsModel, final Form storeEditForm) {
 
         super(id);
         server = addTextPanel(paramsModel, "server", true);
         
-        //TODO: Add numeric validator for port
+        //TODO: Add numeric validator for port and epsgcode
         port = addTextPanel(paramsModel, "port", true);
+        epsgcode = addTextPanel(paramsModel, "epsgcode", false);
         user = addTextPanel(paramsModel, "user", "Postgis user", true);
         password = addPasswordPanel(paramsModel, "password");
         database = addTextPanel(paramsModel, "database", "Postgis Database", true);
@@ -74,6 +77,7 @@ public class PGRasterPanel extends Panel {
         database.setOutputMarkupId(true);
         table.setOutputMarkupId(true);
         schema.setOutputMarkupId(true);
+        epsgcode.setOutputMarkupId(true);
 
         fileext.setOutputMarkupId(true);
         importopt.setOutputMarkupId(true);
@@ -129,10 +133,15 @@ public class PGRasterPanel extends Panel {
      */
     public String buildURL() {
         StringBuilder builder = new StringBuilder("pgraster://");
-//        pgraster://USER:PASS@HOST:PORT:DATABASE.SCHEMA.TABLE:*.FILE_EXTENSION?OPTIONS#/PATH/TO/RASTER_TILES/"
+//        pgraster://USER:PASS@HOST:PORT:DATABASE.SCHEMA.TABLE@EPSGCODE:*.FILE_EXTENSION?OPTIONS#/PATH/TO/RASTER_TILES/"
         builder.append(user.getValue()).append(":").append(password.getValue()).append("@").append(server.getValue()).append(":")
         .append(port.getValue()).append(":").append(database.getValue()).append(".").append(schema.getValue()).append(".")
-        .append(table.getValue()).append(":");
+        .append(table.getValue());
+        final String epsgCode = epsgcode.getValue();
+        if (epsgCode != null && epsgCode.trim().length() > 0) {
+            builder.append("@").append(epsgCode);
+        }
+        builder.append(":");
         final String fileExt = fileext.getValue();
         if (fileExt != null && fileExt.trim().length() > 0) {
             builder.append(fileExt);
