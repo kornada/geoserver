@@ -440,6 +440,16 @@
         </dependency>
       </dependencies>
     </profile>
+     <profile>
+      <id>pgraster</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.geoserver.extension</groupId>
+          <artifactId>pgraster</artifactId> 
+          <version>2.4-SNAPSHOT</version>
+        </dependency>
+      </dependencies>
+    </profile>
     <profile>
       <id>feature-pregeneralized</id>
       <dependencies>

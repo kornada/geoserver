@@ -65,7 +65,7 @@ public final class PGRasterCoverageStoreEditPanel extends StoreEditPanel {
         add(url);
         
         // enabled flag, and show the rest only if enabled is true
-        IModel<Boolean> enabledModel = new Model<Boolean>();
+        IModel<Boolean> enabledModel = new Model<Boolean>(false);
         enabled = new CheckBox("enabled", enabledModel);
         add(enabled);
         enabled.add(new AjaxFormComponentUpdatingBehavior("onclick") {

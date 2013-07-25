@@ -239,7 +239,12 @@ public class GeoserverDataDirectory {
                 return new File(baseDir, path);
             }
         } else {
-            return new File(path);
+            File file = new File(path);
+            if (file.exists()) {
+                return file;
+            } 
+            // Allows dealing with Strings by returning no file
+            return null;
         }
     }
 
