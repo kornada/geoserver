@@ -4,15 +4,26 @@
  */
 package org.geoserver.web.data.store.pgraster;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import org.apache.wicket.behavior.SimpleAttributeModifier;
 import org.apache.wicket.markup.html.form.Form;
 import org.apache.wicket.markup.html.form.FormComponent;
 import org.apache.wicket.markup.html.panel.Panel;
 import org.apache.wicket.model.IModel;
+import org.apache.wicket.model.PropertyModel;
 import org.apache.wicket.model.ResourceModel;
 import org.geoserver.web.data.store.panel.PasswordParamPanel;
 import org.geoserver.web.data.store.panel.TextParamPanel;
 import org.geoserver.web.util.MapModel;
+import org.geoserver.web.wicket.CRSPanel;
+import org.geoserver.web.wicket.SRSToCRSModel;
+import org.geotools.gce.imagemosaic.ImageMosaicReader;
+import org.geotools.referencing.CRS;
+import org.opengis.referencing.FactoryException;
+import org.opengis.referencing.NoSuchAuthorityCodeException;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 /**
  * a Panel with PGRaster automatic configuration options
@@ -33,6 +44,8 @@ public class PGRasterPanel extends Panel {
     private static final String RESOURCE_KEY_PREFIX = PGRasterPanel.class
             .getSimpleName();
 
+    private final static Logger LOGGER = org.geotools.util.logging.Logging.getLogger(ImageMosaicReader.class);
+
     FormComponent server;
 
     FormComponent port;
@@ -51,24 +64,38 @@ public class PGRasterPanel extends Panel {
 
     FormComponent importopt;
 
-    FormComponent epsgcode;
+    CRSPanel epsgcode;
+
+    private static CoordinateReferenceSystem DEFAULT_CRS; 
+    static {
+        try {
+            DEFAULT_CRS = CRS.decode("EPSG:4326");
+        } catch (NoSuchAuthorityCodeException e) {
+            LOGGER.log(Level.FINER, e.getMessage(), e);
+        } catch (FactoryException e) {
+            LOGGER.log(Level.FINER, e.getMessage(), e);
+        }
+    }
 
     public PGRasterPanel(final String id, final IModel paramsModel, final Form storeEditForm) {
 
         super(id);
         server = addTextPanel(paramsModel, "server", true);
         
-        //TODO: Add numeric validator for port and epsgcode
         port = addTextPanel(paramsModel, "port", true);
-        epsgcode = addTextPanel(paramsModel, "epsgcode", false);
+        SRSToCRSModel srsModel = new SRSToCRSModel(new PropertyModel(paramsModel, "ESPG:4326"));
+        epsgcode = new CRSPanel("epsgcode", srsModel);
+        epsgcode.setModelObject(DEFAULT_CRS);
+        add(epsgcode);
+        
         user = addTextPanel(paramsModel, "user", "Postgis user", true);
         password = addPasswordPanel(paramsModel, "password");
         database = addTextPanel(paramsModel, "database", "Postgis Database", true);
         table = addTextPanel(paramsModel, "table", true);
         schema = addTextPanel(paramsModel, "schema", true);
+        schema.setModelValue(new String[]{"public"});
         fileext = addTextPanel(paramsModel, "fileext", "tiles file extension filter", false);
         importopt = addTextPanel(paramsModel, "importopt", "raster2pgsql script import options",  false);
-
 
         server.setOutputMarkupId(true);
         port.setOutputMarkupId(true);
@@ -77,7 +104,6 @@ public class PGRasterPanel extends Panel {
         database.setOutputMarkupId(true);
         table.setOutputMarkupId(true);
         schema.setOutputMarkupId(true);
-        epsgcode.setOutputMarkupId(true);
 
         fileext.setOutputMarkupId(true);
         importopt.setOutputMarkupId(true);
@@ -130,6 +156,7 @@ public class PGRasterPanel extends Panel {
     /**
      * Setup a URL String composing all the required configuration options
      * @return
+     * @throws FactoryException 
      */
     public String buildURL() {
         StringBuilder builder = new StringBuilder("pgraster://");
@@ -137,9 +164,19 @@ public class PGRasterPanel extends Panel {
         builder.append(user.getValue()).append(":").append(password.getValue()).append("@").append(server.getValue()).append(":")
         .append(port.getValue()).append(":").append(database.getValue()).append(".").append(schema.getValue()).append(".")
         .append(table.getValue());
-        final String epsgCode = epsgcode.getValue();
-        if (epsgCode != null && epsgCode.trim().length() > 0) {
-            builder.append("@").append(epsgCode);
+        final CoordinateReferenceSystem crs = (CoordinateReferenceSystem) epsgcode.getModel().getObject();
+        if (crs != null) {
+            Integer code;
+            try {
+                code = CRS.lookupEpsgCode(crs, false);
+                if (code != null) {
+                    builder.append("@").append(code);
+                }
+            } catch (FactoryException e) {
+                if (LOGGER.isLoggable(Level.WARNING)) {
+                    LOGGER.warning("Unable to parse the specified CRS due to " + e.getMessage());
+                }
+            }
         }
         builder.append(":");
         final String fileExt = fileext.getValue();
