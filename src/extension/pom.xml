@@ -288,6 +288,7 @@
         <module>xslt</module>
         <module>inspire</module>
         <module>css</module>
+        <module>pgraster</module>
       </modules>
     </profile>
 
@@ -321,9 +322,8 @@
         <module>xslt</module>
         <module>inspire</module>
         <module>css</module>
+        <module>pgraster</module>
       </modules>
     </profile>
-
   </profiles>
-
 </project>
