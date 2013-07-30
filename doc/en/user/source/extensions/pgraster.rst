@@ -2,24 +2,22 @@
 
 PGRaster extension
 ==================
-The PGRaster geoserver module adds the ability to simplify the configuration of an ImageMosaic-JDBC PGRaster based store.
+The PGRaster geoserver extension adds the ability to simplify the configuration of a PostGis Raster based ImageMosaic-JDBC store.
 Before proceeding, make sure to take a look to the `PostGis Raster plugin documentation
-<http://docs.geotools.org/latest/userguide/library/coverage/pgraster.html>`_ which provides background information.
+<http://docs.geotools.org/latest/userguide/library/coverage/pgraster.html>`_ for background information.
 
-**This extension allows to do all of these steps automatically:**
+**This extension allows to do the following steps automatically:**
 
 #. use raster2pgsql (optionally) to import raster tiles previously configured with gdal_retile
-#. create a metadata table (optionally) referring to tiles table imported through raster2pgsql
-#. create the imageMosaic JDBC XML configuration with PostGis database connection parameters, attributes mapping and coverage configuration. 
+#. create a metadata table (optionally) referring to tiles tables created through raster2pgsql
+#. create the imageMosaic JDBC XML configuration containing PostGis database connection parameters, attributes mapping and coverage configuration. 
 #. configure the imageMosaic JDBC on top of the newly configured XML.
 
 Requirements
 ------------
 * You must have a PostGIS 2.0 database where your raster tiles will be stored.
 * raster tiles should have been previously created using ``gdal_retile`` since this module will simply import them and configure the store.
-* In case you want to perform automatic import of the raster tiles into the database, you need to have:
-          
-          * raster2pgsql and psql executables installed on your machine and configured on your ``PATH``.
+* In case you want to perform automatic import of the raster tiles into the database, you need to have raster2pgsql and psql executables installed on your machine and configured on your ``PATH``. (In case your PostGIS 2.0 installation is on the same machine where you will run GeoServer, the executables should be already available).
     
 Installation
 ------------
@@ -35,13 +33,13 @@ Installation
 
 Usage
 -----
-#. as for any other store configuration, go to Stores->Add new Store
+#. As for any other store configuration, go to Stores->Add new Store
 #. Select ImageMosaicJDBC. You will see the usual "Add Raster Data Source" form.
 
        .. figure:: images/imagemosaicjdbcstore.png
        
-       For backward compatibility, you may still configure an ImageMosaicJDBC in the old-way by specifying the URL of a valid
-       XML configuration files as done in the past (Where anything need to be configured by hand by the user).
+       For backward compatibility, you may still configure an ImageMosaicJDBC in the old-way, by specifying the URL of a valid
+       XML configuration file, as done in the past (Where all the components of the ImageMosaicJDBC need to be configured by hand by the user).
    
 #. Notice the presence of a checkBox which allows to proceed with the PGRaster automatic configuration parameters specification. 
    Once Clicking on it, you will see a set of new parameters for the automatic configuration step. When enabling that checkBox, the URL parameter needs to point to the main folder containing the rasters which have been previously produced using gdal_retile. 
@@ -73,9 +71,9 @@ Usage
    * - File extension
      - The extension of the raster files to be imported (as an instance *.png). It may not be specified when raster tiles have been already manually imported into the database by the user
    * - raster2pgsql import options
-     - The raster2pgsql script importing options (as an instance "-t 128x128"). It may not be specified when raster tiles have been already manually imported into the database by the user
+     - The raster2pgsql script importing options (as an instance "-t 128x128" for raster tiles of 128x128). It may not be specified when raster tiles have been already manually imported into the database by the user
    * - EPSG Code
-     - The EPSG code which will be configured in the coverage configuration xml.
+     - The EPSG code which will be configured in the coverage configuration xml. (Default is 4326)
 
 Limitations
 -----------
