@@ -1243,8 +1243,8 @@ public class ResourcePool {
                     // /////////////////////////////////////////////////////////
                     final String url = info.getURL();
                     final File obj = GeoserverDataDirectory.findDataFile(url);
-                    Object input = obj != null ? obj : url;
-                    
+                    // In case no File is returned, provide the original String url
+                    final Object input = obj != null ? obj : url;  
                     // readers might change the provided hints, pass down a defensive copy
                     reader = gridFormat.getReader(input, new Hints(hints));
                     if(reader == null) {
