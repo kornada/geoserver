@@ -74,36 +74,9 @@ public class HarvestedCoverageResource extends AbstractCatalogResource {
         };
     }
 
-//    
-//    
-//    @Override
-//    protected Object handleObjectGet() throws Exception {
-//        String workspace = getAttribute( "workspace");
-//        String coveragestore = getAttribute( "coveragestore");
-//        String coverage = getAttribute( "coverage" );
-//
-//        LOGGER.fine( "GET coverage " + coveragestore + "," + coverage );
-//        final CoverageStoreInfo cs = catalog.getCoverageStoreByName(workspace, coveragestore);
-//        final GridCoverageReader reader = cs.getGridCoverageReader(null, null);
-//        final String[] coverageNames = reader.getGridCoverageNames();
-//        final List<CoverageInfo> infos = new ArrayList<CoverageInfo>();
-//        for (String name: coverageNames) {
-//            CoverageInfoImpl cInfo = new CoverageInfoImpl(catalog, name);
-//            cInfo.setName(name);
-//            NamespaceInfo namespace = catalog.getNamespaceByPrefix(workspace);
-//            if (namespace == null) {
-//                namespace = catalog.getDefaultNamespace();
-//            }
-//            cInfo.setNamespace(namespace);
-//
-//            infos.add(cInfo);
-//        }
-//        return infos;
-//    }
-
     @Override
     public boolean allowPost() {
-        return true;//getAttribute("coveragestores") == null;
+        return false;
     }
     
     @Override
