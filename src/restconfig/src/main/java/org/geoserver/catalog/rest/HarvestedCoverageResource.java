@@ -103,7 +103,7 @@ public class HarvestedCoverageResource extends AbstractCatalogResource {
 
     @Override
     public boolean allowPost() {
-        return getAttribute("coveragestores") == null;
+        return true;//getAttribute("coveragestores") == null;
     }
     
     @Override

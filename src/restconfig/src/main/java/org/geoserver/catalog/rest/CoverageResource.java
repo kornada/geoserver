@@ -15,6 +15,8 @@ import org.geoserver.catalog.NamespaceInfo;
 import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.rest.RestletException;
 import org.geoserver.rest.format.DataFormat;
+import org.geotools.coverage.grid.io.GridCoverage2DReader;
+import org.geotools.factory.GeoTools;
 import org.restlet.Context;
 import org.restlet.data.Request;
 import org.restlet.data.Response;
@@ -74,10 +76,11 @@ public class CoverageResource extends AbstractCatalogResource {
             CoverageStoreInfo ds = catalog.getCoverageStoreByName( workspace, coveragestore );
             coverage.setStore( ds );
         }
-
+        String name = coverage.getName();
         CatalogBuilder builder = new CatalogBuilder(catalog);
-        builder.setStore(coverage.getStore());
-        builder.initCoverage(coverage);
+        CoverageStoreInfo store = coverage.getStore();
+        builder.setStore(store);
+        builder.initCoverage(coverage, name);
 
         NamespaceInfo ns = coverage.getNamespace();
         if ( ns != null && !ns.getPrefix().equals( workspace ) ) {

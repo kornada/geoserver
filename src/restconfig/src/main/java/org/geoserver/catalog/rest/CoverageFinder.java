@@ -55,10 +55,7 @@ public class CoverageFinder extends AbstractCatalogFinder {
                     throw new RestletException( "No such coverage: "+ws+","+c, Status.CLIENT_ERROR_NOT_FOUND );
                 }
             }
-        } else if (request.getMethod() == Method.POST) {
-            return new HarvestedCoverageResource(getContext(), request, response, catalog);
         }
-
         return new CoverageResource(null,request,response,catalog);
     }
 
