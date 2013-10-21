@@ -1,3 +1,7 @@
+/* Copyright (c) 2013 OpenPlans - www.openplans.org. All rights reserved.
+ * This code is licensed under the GPL 2.0 license, available at the root
+ * application directory.
+ */
 package org.geoserver.map.png.providers;
 
 import java.awt.image.DataBufferByte;
@@ -31,7 +35,8 @@ public final class RasterByteSingleBandProvider extends AbstractScanlineProvider
             throw new IllegalStateException("All scanlines have been read already");
         }
 
-        System.arraycopy(bytes, cursor.next(), scanline, offset, length);
+        final int next = cursor.next();
+        System.arraycopy(bytes, next, scanline, offset, length);
         currentRow++;
     }
 
