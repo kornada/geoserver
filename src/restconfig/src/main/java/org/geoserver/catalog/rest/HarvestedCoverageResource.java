@@ -10,13 +10,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.geoserver.catalog.Catalog;
-import org.geoserver.catalog.CatalogBuilder;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.CoverageStoreInfo;
 import org.geoserver.rest.format.DataFormat;
 import org.geoserver.rest.format.ReflectiveXMLFormat;
-import org.geotools.coverage.grid.io.GridCoverage2DReader;
-import org.geotools.factory.GeoTools;
 import org.opengis.coverage.grid.GridCoverageReader;
 import org.restlet.Context;
 import org.restlet.data.Request;
@@ -25,7 +22,7 @@ import org.restlet.data.Response;
 import com.thoughtworks.xstream.XStream;
 
 /**
- * A {@link CatalogResource} 
+ * A {@link CatalogResource} to be used 
  * 
  * @author Daniele Romagnoli, GeoSolutions SAS
  *
@@ -72,44 +69,6 @@ public class HarvestedCoverageResource extends AbstractCatalogResource {
                 xstream.toXML( data, output );
             }
         };
-    }
-
-    @Override
-    public boolean allowPost() {
-        return false;
-    }
-    
-    @Override
-    protected String handleObjectPost(Object object) throws Exception {
-        String workspace = getAttribute( "workspace");
-        String coveragestore = getAttribute( "coveragestore");
-
-        CoverageInfo coverage = (CoverageInfo) object;
-        if ( coverage.getStore() == null ) {
-            //get from requests
-            CoverageStoreInfo ds = catalog.getCoverageStoreByName( workspace, coveragestore );
-            coverage.setStore( ds );
-        }
-        String name = coverage.getName();
-        CatalogBuilder builder = new CatalogBuilder(catalog);
-        CoverageStoreInfo store = coverage.getStore();
-        builder.setStore(store);
-
-        GridCoverage2DReader reader = (GridCoverage2DReader) catalog
-                .getResourcePool().getGridCoverageReader(store, GeoTools.getDefaultHints());
-        coverage = builder.buildCoverage(reader, name, null);
-        catalog.add( coverage );
-
-        //create a layer for the coverage
-        catalog.add(builder.buildLayer(coverage));
-
-        LOGGER.info( "POST coverage " + coveragestore + "," + coverage.getName() );
-        return name;
-    }
-
-    @Override
-    public boolean allowPut() {
-        return false;
     }
 
     void clear(CoverageInfo info) {
