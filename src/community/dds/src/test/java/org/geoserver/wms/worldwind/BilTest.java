@@ -4,7 +4,8 @@
  */
 package org.geoserver.wms.worldwind;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,7 +61,7 @@ public class BilTest extends WMSTestSupport {
 		"&format=application/bil&srs=EPSG:4326";
 		String response = getAsString(request);
 		// Check response length in bytes
-		assertEquals("testStandardRequest",9377,response.getBytes().length);
+		assertEquals("testStandardRequest",8193,response.getBytes().length);
 	    
 	    
 	    request = "wms?service=wms&request=GetMap&version=1.1.1" +

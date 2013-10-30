@@ -7,8 +7,6 @@ package org.geoserver.wms.worldwind;
 import java.io.File;
 import java.io.IOException;
 
-import junit.framework.Test;
-
 import org.apache.commons.io.FileUtils;
 import org.geoserver.wms.map.RenderedImageMapOutputFormat;
 import org.geoserver.wms.map.RenderedImageMapOutputFormatTest;
