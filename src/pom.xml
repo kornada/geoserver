@@ -52,6 +52,15 @@
 
  <repositories>
   <repository>
+   <id>geosolutions</id>
+   <name>GeoSolutions Maven Repository</name>
+   <url>http://maven.geo-solutions.it/</url>
+   <snapshots>
+     <enabled>true</enabled>
+   </snapshots>
+  </repository>  
+   
+  <repository>
    <id>opengeo</id>
    <name>OpenGeo Maven Repository</name>
    <url>http://repo.opengeo.org/</url>
@@ -1325,6 +1334,11 @@
       <artifactId>wagon-webdav</artifactId>
       <version>1.0-beta-2</version>
     </extension>
+      <extension>                                  
+       <groupId>org.apache.maven.wagon</groupId>   
+       <artifactId>wagon-ftp</artifactId>           
+       <version>1.0-beta-2</version>               
+      </extension>        
   </extensions>
 
  </build>
@@ -1443,20 +1457,19 @@
   </plugins>
  </reporting>
 
- <distributionManagement>
-  <repository>
-   <id>opengeo</id>
-   <name>OpenGeo Maven Repository</name>
-   <url>dav:http://repo.opengeo.org</url>
-   <uniqueVersion>false</uniqueVersion>
-  </repository>
-  <snapshotRepository>
-   <id>opengeo</id>
-   <name>OpenGeo Maven Repository</name>
-   <url>dav:http://repo.opengeo.org</url>
-   <uniqueVersion>false</uniqueVersion>
-  </snapshotRepository>
- </distributionManagement>
+  <distributionManagement>
+      <repository>
+       <uniqueVersion>false</uniqueVersion>
+       <id>geosolutions</id>
+       <url>ftp://demo.geo-solutions.it</url>
+      </repository>
+    <snapshotRepository>
+        <uniqueVersion>false</uniqueVersion>
+        <name>GeoSolutions Maven Repository</name>
+       <id>geosolutions</id>
+       <url>ftp://demo.geo-solutions.it</url>
+    </snapshotRepository>
+  </distributionManagement>
 
  <modules>
   <module>platform</module>
