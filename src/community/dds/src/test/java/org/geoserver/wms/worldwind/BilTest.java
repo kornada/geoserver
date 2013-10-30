@@ -36,15 +36,13 @@ public class BilTest extends WMSTestSupport {
 	public static String WCS_PREFIX = "wcs";
     public static String WCS_URI = "http://www.opengis.net/wcs/1.1.1";
     public static QName AUS_DEM = new QName(WCS_URI, "Ausdem", WCS_PREFIX);
-    
-    private RenderedImageMapOutputFormat rasterMapProducer;
-    
+        
     @Override
     protected void onSetUp(SystemTestData testData) throws Exception {
         super.onSetUp(testData);
 
         testData.addStyle("raster", "raster.sld", BilTest.class, getCatalog());
-        testData.addRasterLayer(AUS_DEM, "aus_dem.tif", "tiff", null, BilTest.class, getCatalog());
+        testData.addRasterLayer(AUS_DEM, "aus_dem.tiff", "tiff", null, BilTest.class, getCatalog());
         
         WMSInfo wmsInfo = getGeoServer().getService(WMSInfo.class);
         wmsInfo.setMaxBuffer(50);
@@ -103,5 +101,11 @@ public class BilTest extends WMSTestSupport {
 	protected void copySchemaFile(String file) throws IOException {
         File f = new File("../../web/app/src/main/webapp/schemas/" + file);
         FileUtils.copyFile(f, getResourceLoader().createFile("WEB-INF/schemas/"+file));
+    }
+
+
+    @Override
+    protected boolean isMemoryCleanRequired() {
+        return true; //helps on windows as it forces a GC
     }
 }
