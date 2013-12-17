@@ -16,6 +16,8 @@ import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.config.util.XStreamPersister;
 import org.geoserver.rest.RestletException;
 import org.geoserver.rest.format.DataFormat;
+import org.geotools.coverage.grid.io.StructuredGridCoverage2DReader;
+import org.opengis.coverage.grid.GridCoverageReader;
 import org.restlet.Context;
 import org.restlet.data.Request;
 import org.restlet.data.Response;
@@ -99,7 +101,8 @@ public class CoverageStoreResource extends AbstractCatalogResource {
         String workspace = getAttribute("workspace");
         String coveragestore = getAttribute("coveragestore");
         boolean recurse = getQueryStringValue("recurse", Boolean.class, false);
-        
+        boolean deleteData = getQueryStringValue("deletedata", Boolean.class, false);
+
         CoverageStoreInfo cs = catalog.getCoverageStoreByName(workspace, coveragestore);
         if (!recurse) {
             if ( !catalog.getCoveragesByCoverageStore(cs).isEmpty() ) {
@@ -109,6 +112,10 @@ public class CoverageStoreResource extends AbstractCatalogResource {
         }
         else {
             new CascadeDeleteVisitor(catalog).visit(cs);
+        }
+        GridCoverageReader reader = cs.getGridCoverageReader(null, null);
+        if (reader instanceof StructuredGridCoverage2DReader) {
+            ((StructuredGridCoverage2DReader) reader).delete(deleteData);
         }
         clear(cs);
         
