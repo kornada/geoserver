@@ -59,6 +59,13 @@ public class StructuredSingleGridCoverage2DReader extends SingleGridCoverage2DRe
     }
 
     @Override
+    @Deprecated
+    public boolean removeCoverage(String coverageName) throws IOException,
+            UnsupportedOperationException {
+        return removeCoverage(coverageName, false);
+    }
+
+    @Override
     public void delete(boolean deleteData) throws IOException,
             UnsupportedOperationException {
         structuredDelegate.delete(deleteData);
