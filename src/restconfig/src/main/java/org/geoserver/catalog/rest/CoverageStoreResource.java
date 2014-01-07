@@ -102,7 +102,7 @@ public class CoverageStoreResource extends AbstractCatalogResource {
         String workspace = getAttribute("workspace");
         String coveragestore = getAttribute("coveragestore");
         boolean recurse = getQueryStringValue("recurse", Boolean.class, false);
-        String deleteType = getQueryStringValue("delete", String.class, "none");
+        String deleteType = getQueryStringValue("purge", String.class, "none");
 
         CoverageStoreInfo cs = catalog.getCoverageStoreByName(workspace, coveragestore);
         if (!recurse) {
