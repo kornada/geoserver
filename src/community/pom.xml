@@ -239,18 +239,25 @@
     </profile>
    <profile>
       <id>png</id>
+      <activation>
+        <property>
+          <name>png</name>
+        </property>
+      </activation> 
       <modules>
         <module>png</module>
       </modules>
     </profile>
-		<profile>
-			<id>libjpeg-turbo</id>
+    <profile>
+      <id>libjpeg-turbo</id>
       <activation>
-        <property><name>libjpeg-turbo</name></property>
+        <property>
+          <name>libjpeg-turbo</name>
+        </property>
       </activation> 
-			<modules>
-				<module>libjpeg-turbo</module>
-			</modules>
-		</profile>    
+      <modules>
+        <module>libjpeg-turbo</module>
+      </modules>
+    </profile>    
   </profiles>
 </project>
